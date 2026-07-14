@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HotelFlow — Oteller için QR Kod Tabanlı Dijital Resepsiyon &amp; Operasyon Sistemi</title>
+<meta name="description" content="Misafirler oda içindeki QR kodu tarar; temizlik, oda servisi, teknik destek, kahvaltı ve özel talepler saniyeler içinde doğru personele ulaşır. Yönetici tüm operasyonu tek ekrandan izler." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preconnect" href="https://images.unsplash.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --navy-950: #060d1b;
+    --navy-900: #0a1425;
+    --navy-800: #0f1f38;
+    --navy-700: #16294a;
+    --navy-600: #26456f;
+    --gold: #c39a4e;
+    --gold-light: #d9b878;
+    --gold-dark: #a67f3a;
+    --cream: #f7f2e8;
+    --cream-dark: #efe7d6;
+    --ink: #1a2334;
+    --ink-soft: #55617a;
+    --green: #1d9268;
+    --red: #d94848;
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans: 'Inter', system-ui, sans-serif;
+    --glass: rgba(255,255,255,0.055);
+    --glass-border: rgba(255,255,255,0.12);
+    --shadow-lg: 0 30px 70px rgba(3,8,18,0.55);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--navy-900);
+    color: var(--cream);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, h4, .serif { font-family: var(--serif); font-weight: 600; }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+  .container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 110px 0; position: relative; }
+
+  /* ============ ornaments ============ */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 12px;
+    color: var(--gold-light); font-size: 12.5px; letter-spacing: 0.32em;
+    text-transform: uppercase; font-weight: 700;
+  }
+  .eyebrow::before { content: ''; width: 36px; height: 1px; background: var(--gold); }
+  .section-head { max-width: 680px; margin: 0 auto 64px; text-align: center; }
+  .section-head .eyebrow { justify-content: center; }
+  .section-head .eyebrow::after { content: ''; width: 36px; height: 1px; background: var(--gold); }
+  .section-head h2 { font-size: clamp(30px, 3.8vw, 46px); line-height: 1.18; margin: 18px 0 16px; }
+  .section-head p { color: rgba(247,242,232,0.62); font-size: 17.5px; }
+  .light .section-head p { color: var(--ink-soft); }
+  .light .section-head h2 { color: var(--ink); }
+
+  /* ============ buttons ============ */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    padding: 15px 30px; border-radius: 12px; font-weight: 700; font-size: 15px;
+    cursor: pointer; border: 1px solid transparent; font-family: var(--sans);
+    transition: transform 0.25s, box-shadow 0.25s, filter 0.25s, background 0.25s;
+    position: relative;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, #e3c288, var(--gold) 55%, var(--gold-dark));
+    color: #241a08;
+    box-shadow: 0 8px 26px rgba(195,154,78,0.28), inset 0 1px 0 rgba(255,255,255,0.35);
+  }
+  .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 14px 38px rgba(195,154,78,0.45), inset 0 1px 0 rgba(255,255,255,0.35); filter: brightness(1.05); }
+  .btn-ghost { border-color: rgba(217,184,120,0.45); color: var(--gold-light); background: rgba(195,154,78,0.06); backdrop-filter: blur(6px); }
+  .btn-ghost:hover { background: rgba(195,154,78,0.14); border-color: rgba(217,184,120,0.8); transform: translateY(-2px); }
+  .btn-sm { padding: 10px 20px; font-size: 14px; border-radius: 10px; }
+  .btn-lg { padding: 17px 36px; font-size: 16px; }
+
+  /* ============ nav ============ */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    transition: background 0.35s, border-color 0.35s, backdrop-filter 0.35s;
+    border-bottom: 1px solid transparent;
+  }
+  nav.scrolled {
+    background: rgba(6,13,27,0.78);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border-bottom-color: rgba(195,154,78,0.16);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 74px; }
+  .logo { display: flex; align-items: center; gap: 11px; font-family: var(--serif); font-size: 23px; letter-spacing: 0.02em; }
+  .logo-mark {
+    width: 36px; height: 36px; border: 1.5px solid var(--gold); border-radius: 9px;
+    display: grid; place-items: center; color: var(--gold-light); font-size: 16px; font-family: var(--serif);
+    background: linear-gradient(150deg, rgba(195,154,78,0.18), transparent);
+  }
+  .logo em { color: var(--gold-light); font-style: normal; }
+  .nav-links { display: flex; gap: 30px; font-size: 14.5px; font-weight: 600; color: rgba(247,242,232,0.72); }
+  .nav-links a { transition: color 0.2s; }
+  .nav-links a:hover { color: var(--gold-light); }
+  .nav-cta { display: flex; align-items: center; gap: 14px; }
+  .hamburger {
+    display: none; width: 44px; height: 44px; border: 1px solid rgba(217,184,120,0.4);
+    border-radius: 10px; background: rgba(195,154,78,0.08); cursor: pointer;
+    flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  }
+  .hamburger span { width: 18px; height: 2px; background: var(--gold-light); transition: transform 0.3s, opacity 0.3s; border-radius: 2px; }
+  .mobile-menu {
+    position: fixed; inset: 74px 0 auto 0; z-index: 190;
+    background: rgba(6,13,27,0.96); backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(195,154,78,0.2);
+    padding: 12px 24px 28px; display: none;
+  }
+  .mobile-menu.open { display: block; animation: menuIn 0.3s ease; }
+  @keyframes menuIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+  .mobile-menu a { display: block; padding: 15px 4px; font-weight: 600; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .mobile-menu .btn { margin-top: 18px; width: 100%; }
+
+  /* ============ hero ============ */
+  .hero {
+    position: relative; min-height: 100vh; display: flex; align-items: center;
+    padding: 150px 0 90px; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: -8% 0; z-index: -2;
+    background-image: url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2000&auto=format&fit=crop');
+    background-size: cover; background-position: center 40%;
+    will-change: transform;
+  }
+  .hero-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      linear-gradient(100deg, rgba(6,13,27,0.96) 22%, rgba(6,13,27,0.82) 48%, rgba(8,16,32,0.55) 75%, rgba(10,20,37,0.75)),
+      linear-gradient(to top, var(--navy-900) 2%, transparent 32%);
+  }
+  .hero-glow {
+    position: absolute; z-index: -1; border-radius: 50%; filter: blur(90px); pointer-events: none;
+  }
+  .hero-glow.g1 { width: 560px; height: 560px; right: -140px; top: -80px; background: rgba(195,154,78,0.17); animation: glowPulse 9s ease-in-out infinite; }
+  .hero-glow.g2 { width: 420px; height: 420px; left: 32%; bottom: -180px; background: rgba(38,69,111,0.35); animation: glowPulse 11s ease-in-out 2s infinite; }
+  @keyframes glowPulse { 0%,100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
+
+  .hero-grid { display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 60px; align-items: center; }
+  .hero h1 { font-size: clamp(38px, 4.9vw, 60px); line-height: 1.1; margin: 22px 0 22px; text-shadow: 0 4px 30px rgba(0,0,0,0.4); }
+  .hero h1 em { font-style: italic; color: var(--gold-light); }
+  .hero .lead { font-size: 18.5px; color: rgba(247,242,232,0.78); max-width: 540px; margin-bottom: 36px; }
+  .hero-ctas { display: flex; gap: 16px; flex-wrap: wrap; }
+
+  .trust-strip {
+    margin-top: 52px; display: flex; flex-wrap: wrap; gap: 10px 26px;
+    padding-top: 26px; border-top: 1px solid rgba(217,184,120,0.22);
+  }
+  .trust { display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 600; color: rgba(247,242,232,0.72); }
+  .trust svg { width: 16px; height: 16px; color: var(--gold-light); flex-shrink: 0; }
+
+  /* phone mockup */
+  .phone-wrap { display: flex; justify-content: center; position: relative; perspective: 1200px; }
+  .phone-wrap::before {
+    content: ''; position: absolute; inset: -60px -40px;
+    background: radial-gradient(ellipse at center, rgba(195,154,78,0.16), transparent 62%);
+    pointer-events: none;
+  }
+  .phone {
+    width: 310px; border-radius: 42px; padding: 13px;
+    background: linear-gradient(160deg, #35425f, #0d1626 70%);
+    border: 1px solid rgba(217,184,120,0.4);
+    box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,0.12);
+    position: relative;
+    animation: phoneFloat 6.5s ease-in-out infinite;
+  }
+  @keyframes phoneFloat {
+    0%, 100% { transform: translateY(0) rotateY(-4deg) rotateX(1.5deg); }
+    50% { transform: translateY(-16px) rotateY(-4deg) rotateX(1.5deg); }
+  }
+  .phone::before {
+    content: ''; position: absolute; top: 13px; left: 50%; transform: translateX(-50%);
+    width: 96px; height: 22px; background: #0d1626; border-radius: 0 0 14px 14px; z-index: 5;
+  }
+  .phone-screen { border-radius: 31px; overflow: hidden; background: #f5f2ea; color: var(--ink); font-size: 12px; }
+  .ph-header {
+    background: linear-gradient(150deg, var(--navy-800), var(--navy-600));
+    color: var(--cream); padding: 34px 16px 16px; position: relative; overflow: hidden;
+  }
+  .ph-header::after {
+    content: ''; position: absolute; top: -40px; right: -40px; width: 130px; height: 130px;
+    background: radial-gradient(circle, rgba(195,154,78,0.35), transparent 70%); border-radius: 50%;
+  }
+  .ph-header .hname { font-family: var(--serif); font-size: 14.5px; letter-spacing: 0.02em; }
+  .ph-header .room { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; position: relative; z-index: 1; }
+  .ph-header .room b { font-size: 17px; }
+  .ph-chip { background: rgba(195,154,78,0.28); color: var(--gold-light); border: 1px solid rgba(195,154,78,0.45); padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+  .ph-body { padding: 13px; }
+  .ph-label { font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-soft); font-weight: 800; margin: 4px 2px 9px; }
+  .ph-quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .ph-qitem {
+    background: #fff; border: 1px solid #e8e1d1; border-radius: 13px;
+    padding: 11px 6px; text-align: center; font-weight: 700; font-size: 10.5px; color: var(--ink);
+    box-shadow: 0 2px 8px rgba(26,35,52,0.05);
+  }
+  .ph-qitem .qi { font-size: 18px; display: block; margin-bottom: 4px; }
+  .ph-req { margin-top: 13px; background: #fff; border: 1px solid #e8e1d1; border-radius: 15px; padding: 13px; box-shadow: 0 4px 14px rgba(26,35,52,0.06); }
+  .ph-req-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; }
+  .ph-req-top b { font-size: 12px; }
+  .ph-status { background: rgba(29,146,104,0.13); color: var(--green); font-weight: 800; font-size: 10px; padding: 3px 10px; border-radius: 99px; }
+  .ph-status.amber { background: rgba(195,154,78,0.16); color: var(--gold-dark); }
+  .ph-track { display: flex; align-items: center; margin: 11px 2px 4px; }
+  .ph-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); flex-shrink: 0; box-shadow: 0 0 0 3px rgba(195,154,78,0.18); }
+  .ph-dot.off { background: #ddd3bd; box-shadow: none; }
+  .ph-line { height: 2px; flex: 1; background: var(--gold); }
+  .ph-line.off { background: #ddd3bd; }
+  .ph-track-labels { display: flex; justify-content: space-between; font-size: 8.5px; color: var(--ink-soft); margin-top: 5px; font-weight: 600; }
+  .ph-eta { margin-top: 9px; font-size: 10.5px; color: var(--ink-soft); }
+  .ph-eta b { color: var(--green); }
+
+  /* floating glass notification over phone */
+  .float-card {
+    position: absolute; z-index: 10;
+    background: rgba(255,255,255,0.09); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 14px;
+    padding: 12px 16px; font-size: 12px; box-shadow: 0 18px 44px rgba(3,8,18,0.5);
+    animation: phoneFloat 7.5s ease-in-out 0.8s infinite;
+  }
+  .float-card b { display: block; font-size: 12.5px; }
+  .float-card small { color: rgba(247,242,232,0.65); font-size: 11px; }
+  .fc1 { top: 12%; left: -8%; }
+  .fc2 { bottom: 14%; right: -10%; animation-delay: 1.8s; }
+  .fc-ico { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: rgba(195,154,78,0.25); margin-right: 8px; vertical-align: middle; }
+
+  /* ============ light section base ============ */
+  .light { background: linear-gradient(180deg, var(--cream) 0%, #f2ecdd 100%); color: var(--ink); }
+  .light .eyebrow { color: var(--gold-dark); }
+  .light .eyebrow::before, .light .section-head .eyebrow::after { background: var(--gold-dark); }
+
+  /* ============ comparison: Otelinizde Ne Değişir ============ */
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; align-items: stretch; }
+  .compare-col h3 { font-size: 22px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+  .compare-col.old h3 { color: rgba(247,242,232,0.55); }
+  .compare-col.new h3 { color: var(--gold-light); }
+  .cmp-card {
+    display: flex; gap: 14px; align-items: flex-start;
+    border-radius: 15px; padding: 18px 20px; margin-bottom: 14px;
+    transition: opacity 0.7s ease, transform 0.7s ease, border-color 0.4s, box-shadow 0.4s;
+  }
+  .compare-col.old .cmp-card {
+    background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07);
+    color: rgba(247,242,232,0.5);
+  }
+  .compare-col.new .cmp-card {
+    background: linear-gradient(160deg, rgba(195,154,78,0.13), rgba(255,255,255,0.03));
+    border: 1px solid rgba(217,184,120,0.32); color: var(--cream);
+    box-shadow: 0 10px 30px rgba(3,8,18,0.3);
+  }
+  .compare-col.new .cmp-card:hover { transform: translateY(-3px); border-color: rgba(217,184,120,0.6); box-shadow: 0 16px 40px rgba(195,154,78,0.14); }
+  .cmp-ico {
+    width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center;
+    flex-shrink: 0; font-size: 16px;
+  }
+  .compare-col.old .cmp-ico { background: rgba(255,255,255,0.05); }
+  .compare-col.new .cmp-ico { background: rgba(195,154,78,0.22); }
+  .cmp-card b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .cmp-card p { font-size: 13.5px; opacity: 0.85; }
+  .vs-badge {
+    display: none;
+  }
+  @media (min-width: 901px) {
+    .compare-wrap { position: relative; }
+    .vs-badge {
+      display: grid; place-items: center; position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%); width: 62px; height: 62px; border-radius: 50%;
+      background: var(--navy-800); border: 1.5px solid var(--gold);
+      font-family: var(--serif); font-size: 17px; color: var(--gold-light); z-index: 5;
+      box-shadow: 0 0 0 10px var(--navy-900), 0 0 40px rgba(195,154,78,0.35);
+    }
+  }
+
+  /* ============ showcase tabs ============ */
+  .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 54px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 13px 26px; border-radius: 99px; font-weight: 700; font-size: 14.5px;
+    border: 1px solid rgba(166,127,58,0.35); color: var(--ink-soft); cursor: pointer;
+    background: rgba(255,255,255,0.5); transition: all 0.25s; font-family: var(--sans);
+  }
+  .tab-btn:hover { border-color: var(--gold-dark); color: var(--ink); }
+  .tab-btn.active {
+    background: var(--navy-800); color: var(--cream); border-color: var(--navy-800);
+    box-shadow: 0 10px 26px rgba(15,31,56,0.3);
+  }
+  .show-panel { display: none; }
+  .show-panel.active { display: grid; animation: panelIn 0.55s cubic-bezier(0.22,0.8,0.3,1); }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+  .show-grid { grid-template-columns: 0.9fr 1.1fr; gap: 56px; align-items: center; }
+  .show-grid.rev { grid-template-columns: 1.1fr 0.9fr; }
+  .show-copy h3 { font-size: clamp(24px, 2.6vw, 32px); color: var(--ink); margin: 14px 0 14px; }
+  .show-copy p { color: var(--ink-soft); font-size: 16px; margin-bottom: 20px; }
+  .show-copy ul { list-style: none; display: grid; gap: 12px; }
+  .show-copy li { display: flex; gap: 11px; font-size: 15px; color: var(--ink); font-weight: 500; }
+  .show-copy li svg { width: 19px; height: 19px; color: var(--gold-dark); flex-shrink: 0; margin-top: 2px; }
+
+  /* browser mockup */
+  .browser {
+    border-radius: 16px; overflow: hidden; background: #fff;
+    border: 1px solid #e2d9c4;
+    box-shadow: 0 34px 80px rgba(15,31,56,0.22), 0 4px 18px rgba(15,31,56,0.08);
+    font-size: 11.5px; color: var(--ink);
+  }
+  .browser-bar {
+    display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+    background: #f0ead9; border-bottom: 1px solid #e2d9c4;
+  }
+  .b-dots { display: flex; gap: 6px; }
+  .b-dots span { width: 10px; height: 10px; border-radius: 50%; }
+  .b-dots span:nth-child(1) { background: #e8695a; }
+  .b-dots span:nth-child(2) { background: #e5b93c; }
+  .b-dots span:nth-child(3) { background: #58b96b; }
+  .b-url {
+    flex: 1; background: #fff; border: 1px solid #e2d9c4; border-radius: 8px;
+    padding: 5px 12px; font-size: 11px; color: var(--ink-soft); max-width: 320px;
+  }
+  .dash { display: flex; min-height: 330px; }
+  .dash-side { width: 128px; background: var(--navy-800); color: rgba(247,242,232,0.75); padding: 14px 10px; flex-shrink: 0; }
+  .dash-side .dlogo { font-family: var(--serif); color: var(--cream); font-size: 13px; padding: 4px 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px; }
+  .dash-side .dlogo em { color: var(--gold-light); font-style: normal; }
+  .dnav { display: grid; gap: 3px; font-size: 10.5px; font-weight: 600; }
+  .dnav span { padding: 7px 9px; border-radius: 7px; }
+  .dnav span.on { background: rgba(195,154,78,0.2); color: var(--gold-light); }
+  .dash-main { flex: 1; padding: 14px; background: #faf7f0; min-width: 0; }
+  .dash-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .dash-top b { font-size: 13px; font-family: var(--serif); }
+  .dash-bell { position: relative; width: 26px; height: 26px; border-radius: 8px; background: #fff; border: 1px solid #e8e1d1; display: grid; place-items: center; font-size: 12px; }
+  .dash-bell i { position: absolute; top: -3px; right: -3px; width: 13px; height: 13px; background: var(--red); color: #fff; border-radius: 50%; font-size: 8px; font-style: normal; display: grid; place-items: center; font-weight: 700; }
+  .dash-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .dm {
+    background: #fff; border: 1px solid #e8e1d1; border-radius: 11px; padding: 9px 10px;
+  }
+  .dm small { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); font-weight: 700; display: block; }
+  .dm b { font-size: 17px; font-family: var(--serif); }
+  .dm .up { color: var(--green); font-size: 9px; font-weight: 700; }
+  .dm .warn { color: var(--red); font-size: 9px; font-weight: 700; }
+  .dash-cols { display: grid; grid-template-columns: 1.1fr 1fr; gap: 8px; }
+  .dash-box { background: #fff; border: 1px solid #e8e1d1; border-radius: 11px; padding: 10px 11px; }
+  .dash-box h5 { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft); margin-bottom: 9px; font-family: var(--sans); font-weight: 800; }
+  .bars { display: flex; align-items: flex-end; gap: 7px; height: 74px; }
+  .bar { flex: 1; border-radius: 4px 4px 0 0; background: linear-gradient(to top, var(--navy-600), var(--navy-800)); position: relative; }
+  .bar.gold { background: linear-gradient(to top, var(--gold-dark), var(--gold-light)); }
+  .bar-labels { display: flex; gap: 7px; margin-top: 5px; }
+  .bar-labels span { flex: 1; text-align: center; font-size: 8px; color: var(--ink-soft); font-weight: 600; }
+  .req-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #ece5d4; }
+  .req-row:last-child { border-bottom: none; }
+  .req-row .rico { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: #f4eede; font-size: 11px; flex-shrink: 0; }
+  .req-row .rtxt { flex: 1; min-width: 0; }
+  .req-row .rtxt b { font-size: 10.5px; display: block; line-height: 1.3; }
+  .req-row .rtxt small { font-size: 9px; color: var(--ink-soft); }
+  .pill { font-size: 8.5px; font-weight: 800; padding: 3px 8px; border-radius: 99px; white-space: nowrap; }
+  .pill.green { background: rgba(29,146,104,0.13); color: var(--green); }
+  .pill.amber { background: rgba(195,154,78,0.18); color: var(--gold-dark); }
+  .pill.red { background: rgba(217,72,72,0.12); color: var(--red); }
+  .pill.blue { background: rgba(38,69,111,0.12); color: var(--navy-600); }
+
+  /* staff phone (in showcase) */
+  .phone.static { animation: none; transform: none; width: 290px; }
+  .stf-task { background: #fff; border: 1px solid #e8e1d1; border-radius: 14px; padding: 12px; margin-bottom: 10px; box-shadow: 0 3px 10px rgba(26,35,52,0.05); }
+  .stf-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .stf-top b { font-size: 11.5px; }
+  .stf-meta { font-size: 10px; color: var(--ink-soft); margin-bottom: 9px; }
+  .stf-actions { display: flex; gap: 7px; }
+  .stf-btn { flex: 1; text-align: center; font-size: 10px; font-weight: 800; padding: 7px 4px; border-radius: 8px; }
+  .stf-btn.primary { background: var(--navy-800); color: var(--cream); }
+  .stf-btn.soft { background: #f2ecdd; color: var(--ink-soft); }
+
+  /* ============ workflow timeline ============ */
+  .flow { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; }
+  .flow::before {
+    content: ''; position: absolute; top: 31px; left: 6%; right: 6%; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(195,154,78,0.5) 12%, rgba(195,154,78,0.5) 88%, transparent);
+    transform: scaleX(0); transform-origin: left center; transition: transform 1.6s cubic-bezier(0.3,0.7,0.3,1);
+  }
+  .flow.in::before { transform: scaleX(1); }
+  .flow-step { text-align: center; opacity: 0; transform: translateY(26px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .flow.in .flow-step { opacity: 1; transform: none; }
+  .flow.in .flow-step:nth-child(1) { transition-delay: 0.1s; }
+  .flow.in .flow-step:nth-child(2) { transition-delay: 0.3s; }
+  .flow.in .flow-step:nth-child(3) { transition-delay: 0.5s; }
+  .flow.in .flow-step:nth-child(4) { transition-delay: 0.7s; }
+  .flow.in .flow-step:nth-child(5) { transition-delay: 0.9s; }
+  .flow.in .flow-step:nth-child(6) { transition-delay: 1.1s; }
+  .flow-ico {
+    width: 62px; height: 62px; margin: 0 auto 16px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 22px; position: relative; z-index: 2;
+    background: linear-gradient(160deg, var(--navy-700), var(--navy-800));
+    border: 1.5px solid rgba(217,184,120,0.55);
+    box-shadow: 0 0 0 8px var(--navy-900), 0 10px 30px rgba(3,8,18,0.4);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .flow-step:hover .flow-ico { transform: translateY(-4px) scale(1.05); box-shadow: 0 0 0 8px var(--navy-900), 0 0 34px rgba(195,154,78,0.35); }
+  .flow-step b { display: block; font-size: 14.5px; margin-bottom: 5px; }
+  .flow-step p { font-size: 12.5px; color: rgba(247,242,232,0.55); line-height: 1.5; }
+  .flow-num { font-family: var(--serif); font-size: 12px; color: var(--gold-light); display: block; margin-bottom: 8px; letter-spacing: 0.2em; }
+
+  /* ============ manager dashboard section ============ */
+  .mgr-grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: 56px; align-items: center; }
+  .mgr-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 28px; }
+  .mgr-card {
+    background: var(--glass); border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: 15px; padding: 18px;
+    transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+  }
+  .mgr-card:hover { transform: translateY(-5px); border-color: rgba(217,184,120,0.5); box-shadow: 0 16px 36px rgba(3,8,18,0.4); }
+  .mgr-card .mi { width: 34px; height: 34px; border-radius: 10px; background: rgba(195,154,78,0.16); display: grid; place-items: center; font-size: 15px; margin-bottom: 12px; }
+  .mgr-card b { display: block; font-size: 14px; margin-bottom: 3px; }
+  .mgr-card small { color: rgba(247,242,232,0.52); font-size: 12px; line-height: 1.45; display: block; }
+  .mgr-visual { position: relative; }
+  .mgr-visual .room-img {
+    border-radius: 22px; overflow: hidden; border: 1px solid rgba(217,184,120,0.3);
+    box-shadow: var(--shadow-lg); aspect-ratio: 4/4.4;
+    background: url('https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1200&auto=format&fit=crop') center/cover;
+  }
+  .mgr-visual .room-img::after { content: ''; position: absolute; inset: 0; border-radius: 22px; background: linear-gradient(to top, rgba(6,13,27,0.65), transparent 55%); }
+  .glass-stat {
+    position: absolute; background: rgba(10,20,37,0.6);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(217,184,120,0.35); border-radius: 16px; padding: 15px 19px;
+    box-shadow: 0 20px 50px rgba(3,8,18,0.55);
+  }
+  .glass-stat b { font-family: var(--serif); font-size: 26px; color: var(--gold-light); display: block; line-height: 1.1; }
+  .glass-stat small { font-size: 11.5px; color: rgba(247,242,232,0.75); font-weight: 600; }
+  .gs1 { top: 26px; left: -34px; animation: phoneFloat 8s ease-in-out infinite; }
+  .gs2 { bottom: 90px; right: -30px; animation: phoneFloat 9s ease-in-out 1.4s infinite; }
+  .gs3 { bottom: -24px; left: 34px; animation: phoneFloat 7.5s ease-in-out 0.6s infinite; }
+
+  /* ============ parallax counter banner ============ */
+  .banner {
+    position: relative; padding: 120px 0; overflow: hidden;
+    background-image: url('https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2000&auto=format&fit=crop');
+    background-size: cover; background-position: center;
+    background-attachment: fixed;
+  }
+  @supports (-webkit-touch-callout: none) { .banner { background-attachment: scroll; } }
+  .banner::before { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(6,13,27,0.92), rgba(15,31,56,0.78)); }
+  .banner .container { position: relative; }
+  .counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; text-align: center; }
+  .counter-item b { font-family: var(--serif); font-size: clamp(38px, 4.4vw, 56px); color: var(--gold-light); display: block; line-height: 1.05; }
+  .counter-item b sup { font-size: 0.5em; }
+  .counter-item span { font-size: 14px; color: rgba(247,242,232,0.7); font-weight: 600; }
+  .banner-quote { text-align: center; max-width: 660px; margin: 0 auto 64px; }
+  .banner-quote p { font-family: var(--serif); font-style: italic; font-size: clamp(20px, 2.4vw, 27px); line-height: 1.45; color: var(--cream); }
+  .banner-quote p em { color: var(--gold-light); }
+
+  /* ============ roles ============ */
+  .roles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  .roles-img {
+    border-radius: 22px; overflow: hidden; position: relative;
+    box-shadow: 0 30px 70px rgba(15,31,56,0.22); aspect-ratio: 4/4.6;
+    background: url('https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=1200&auto=format&fit=crop') center/cover;
+  }
+  .roles-img::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(26,35,52,0.5), transparent 45%); }
+  .roles-img .glass-stat { background: rgba(255,255,255,0.75); border-color: rgba(166,127,58,0.35); }
+  .roles-img .glass-stat b { color: var(--gold-dark); font-size: 15px; font-family: var(--sans); font-weight: 700; }
+  .roles-img .glass-stat small { color: var(--ink-soft); }
+  .role-chips { display: flex; flex-wrap: wrap; gap: 11px; margin: 26px 0 30px; }
+  .role-chip {
+    display: inline-flex; align-items: center; gap: 9px; padding: 11px 19px;
+    border-radius: 99px; background: #fff; border: 1px solid #e2d9c4;
+    font-weight: 700; font-size: 14px; color: var(--ink);
+    transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+  }
+  .role-chip:hover { transform: translateY(-3px); border-color: var(--gold); box-shadow: 0 10px 24px rgba(166,127,58,0.16); }
+  .roles-note {
+    border-left: 3px solid var(--gold); padding: 16px 22px; background: #fff;
+    border-radius: 0 14px 14px 0; color: var(--ink); font-size: 15.5px;
+    box-shadow: 0 8px 24px rgba(15,31,56,0.06);
+  }
+
+  /* ============ menu management ============ */
+  .menu-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
+  .menu-visual { position: relative; }
+  .menu-img {
+    border-radius: 22px; overflow: hidden; aspect-ratio: 4/4.2; position: relative;
+    box-shadow: var(--shadow-lg); border: 1px solid rgba(217,184,120,0.3);
+    background: url('https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?q=80&w=1200&auto=format&fit=crop') center/cover;
+  }
+  .menu-img::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(6,13,27,0.6), transparent 50%); }
+  .menu-admin-card {
+    position: absolute; right: -26px; bottom: 34px; width: 270px;
+    background: rgba(10,20,37,0.72); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(217,184,120,0.4); border-radius: 18px; padding: 16px;
+    box-shadow: 0 24px 60px rgba(3,8,18,0.6);
+    animation: phoneFloat 8.5s ease-in-out infinite;
+  }
+  .menu-admin-card h5 { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-light); margin-bottom: 12px; font-family: var(--sans); font-weight: 800; }
+  .mi-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,0.12); font-size: 12px; }
+  .mi-row:last-child { border-bottom: none; }
+  .mi-row .nm b { display: block; font-size: 12px; }
+  .mi-row .nm small { color: rgba(247,242,232,0.55); font-size: 10.5px; }
+  .toggle { width: 34px; height: 19px; border-radius: 99px; background: rgba(255,255,255,0.15); position: relative; flex-shrink: 0; }
+  .toggle::after { content: ''; position: absolute; top: 2.5px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left 0.2s; }
+  .toggle.on { background: var(--green); }
+  .toggle.on::after { left: 17px; }
+  .feature-list { list-style: none; display: grid; gap: 16px; margin-top: 26px; }
+  .feature-list li { display: flex; gap: 15px; align-items: flex-start; }
+  .feature-list .fi {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(150deg, rgba(195,154,78,0.22), rgba(195,154,78,0.08));
+    border: 1px solid rgba(195,154,78,0.35);
+    display: grid; place-items: center; font-size: 17px;
+  }
+  .light .feature-list .fi { background: #fff; border-color: #e2d9c4; box-shadow: 0 4px 12px rgba(166,127,58,0.1); }
+  .feature-list b { display: block; font-size: 15.5px; }
+  .feature-list p { font-size: 13.5px; opacity: 0.72; }
+
+  /* ============ hotel types ============ */
+  .types-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .type-card {
+    border-radius: 18px; overflow: hidden; background: var(--glass);
+    border: 1px solid var(--glass-border); backdrop-filter: blur(8px);
+    transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+    display: flex; flex-direction: column;
+  }
+  .type-card:hover { transform: translateY(-6px); border-color: rgba(217,184,120,0.5); box-shadow: 0 22px 50px rgba(3,8,18,0.5); }
+  .type-img { aspect-ratio: 16/10; background-size: cover; background-position: center; position: relative; }
+  .type-img::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,20,37,0.85), transparent 60%); }
+  .type-body { padding: 18px 18px 22px; flex: 1; }
+  .type-body b { font-family: var(--serif); font-size: 17px; display: block; margin-bottom: 7px; color: var(--gold-light); }
+  .type-body p { font-size: 12.5px; color: rgba(247,242,232,0.62); line-height: 1.55; }
+
+  /* ============ pricing ============ */
+  .price-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; align-items: stretch; }
+  .price-card {
+    background: #fff; border: 1px solid #e2d9c4; border-radius: 22px; padding: 38px 32px;
+    display: flex; flex-direction: column; position: relative;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+  }
+  .price-card:hover { transform: translateY(-6px); box-shadow: 0 26px 60px rgba(15,31,56,0.14); }
+  .price-card.featured {
+    background: linear-gradient(170deg, var(--navy-800), var(--navy-900));
+    color: var(--cream); border-color: rgba(217,184,120,0.5);
+    box-shadow: 0 30px 70px rgba(15,31,56,0.35);
+    transform: scale(1.04);
+  }
+  .price-card.featured:hover { transform: scale(1.04) translateY(-6px); }
+  .price-badge {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, #e3c288, var(--gold-dark));
+    color: #241a08; font-size: 11px; font-weight: 800; letter-spacing: 0.14em;
+    text-transform: uppercase; padding: 6px 18px; border-radius: 99px; white-space: nowrap;
+    box-shadow: 0 6px 18px rgba(195,154,78,0.4);
+  }
+  .price-card .tier { font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 800; color: var(--gold-dark); }
+  .price-card.featured .tier { color: var(--gold-light); }
+  .price-card h3 { font-size: 26px; margin: 10px 0 6px; }
+  .price-card .pdesc { font-size: 13.5px; opacity: 0.65; margin-bottom: 24px; }
+  .price-card ul { list-style: none; display: grid; gap: 12px; margin-bottom: 32px; flex: 1; }
+  .price-card li { display: flex; gap: 10px; font-size: 14.5px; align-items: flex-start; }
+  .price-card li svg { width: 17px; height: 17px; color: var(--gold-dark); flex-shrink: 0; margin-top: 3px; }
+  .price-card.featured li svg { color: var(--gold-light); }
+  .price-card .btn { width: 100%; }
+  .btn-navy { background: var(--navy-800); color: var(--cream); }
+  .btn-navy:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(15,31,56,0.3); }
+
+  /* ============ demo form ============ */
+  .form-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 0; border-radius: 26px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid rgba(217,184,120,0.25); }
+  .form-side {
+    background: linear-gradient(165deg, var(--navy-800), var(--navy-950));
+    padding: 54px 48px;
+  }
+  .form-side h3 { font-size: clamp(24px, 2.6vw, 32px); margin: 14px 0 12px; }
+  .form-side > p { color: rgba(247,242,232,0.65); font-size: 15.5px; margin-bottom: 34px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field { display: grid; gap: 7px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(247,242,232,0.6); }
+  .field input, .field textarea, .field select {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 11px; padding: 13px 15px; color: var(--cream);
+    font-family: var(--sans); font-size: 14.5px; outline: none; width: 100%;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--gold); background: rgba(195,154,78,0.07); }
+  .field input::placeholder, .field textarea::placeholder { color: rgba(247,242,232,0.32); }
+  .field textarea { resize: vertical; min-height: 88px; }
+  .form-side .btn { width: 100%; margin-top: 22px; }
+  .form-success {
+    display: none; margin-top: 20px; padding: 15px 18px; border-radius: 12px;
+    background: rgba(29,146,104,0.14); border: 1px solid rgba(29,146,104,0.4);
+    color: #7fdcb8; font-size: 14px; font-weight: 600;
+  }
+  .form-visual {
+    position: relative; min-height: 420px;
+    background: url('https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=1200&auto=format&fit=crop') center/cover;
+  }
+  .form-visual::before { content: ''; position: absolute; inset: 0; background: linear-gradient(200deg, rgba(6,13,27,0.25), rgba(6,13,27,0.72)); }
+  .form-visual .glass-stat { left: 34px; bottom: 38px; right: 34px; }
+  .form-visual .glass-stat b { font-size: 17px; font-family: var(--sans); font-weight: 700; color: var(--cream); }
+
+  /* ============ FAQ ============ */
+  .faq-wrap { max-width: 780px; margin: 0 auto; }
+  details.faq {
+    background: #fff; border: 1px solid #e2d9c4; border-radius: 16px;
+    margin-bottom: 13px; overflow: hidden; transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  details.faq:hover { border-color: var(--gold); }
+  details.faq[open] { border-color: var(--gold); box-shadow: 0 14px 34px rgba(166,127,58,0.12); }
+  details.faq summary {
+    list-style: none; cursor: pointer; padding: 21px 26px;
+    font-weight: 700; font-size: 16px; color: var(--ink);
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  .faq-plus {
+    width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--gold-dark);
+    color: var(--gold-dark); display: grid; place-items: center; flex-shrink: 0;
+    font-size: 16px; font-weight: 500; transition: transform 0.3s, background 0.3s, color 0.3s;
+  }
+  details.faq[open] .faq-plus { transform: rotate(45deg); background: var(--gold-dark); color: #fff; }
+  details.faq .faq-body { padding: 0 26px 22px; color: var(--ink-soft); font-size: 15px; }
+
+  /* ============ final CTA ============ */
+  .final-cta {
+    position: relative; overflow: hidden; text-align: center; padding: 130px 0;
+    background:
+      radial-gradient(ellipse 800px 400px at 50% 115%, rgba(195,154,78,0.2), transparent),
+      radial-gradient(ellipse 600px 300px at 15% -10%, rgba(38,69,111,0.4), transparent),
+      var(--navy-950);
+  }
+  .final-cta h2 { font-size: clamp(32px, 4.4vw, 52px); line-height: 1.15; margin-bottom: 20px; }
+  .final-cta h2 em { font-style: italic; color: var(--gold-light); }
+  .final-cta p { color: rgba(247,242,232,0.65); max-width: 560px; margin: 0 auto 40px; font-size: 17.5px; }
+
+  footer { border-top: 1px solid rgba(195,154,78,0.14); padding: 44px 0; background: var(--navy-950); }
+  .foot-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px; }
+  footer small { color: rgba(247,242,232,0.4); font-size: 13px; }
+  .foot-links { display: flex; gap: 22px; font-size: 13.5px; color: rgba(247,242,232,0.55); }
+  .foot-links a:hover { color: var(--gold-light); }
+
+  /* ============ reveal ============ */
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s cubic-bezier(0.22,0.8,0.3,1), transform 0.8s cubic-bezier(0.22,0.8,0.3,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  .reveal.d1 { transition-delay: 0.12s; } .reveal.d2 { transition-delay: 0.24s; }
+  .reveal.d3 { transition-delay: 0.36s; } .reveal.d4 { transition-delay: 0.48s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition-duration: 0.01s !important; }
+    .reveal { opacity: 1; transform: none; }
+  }
+
+  /* ============ responsive ============ */
+  @media (max-width: 1024px) {
+    .fc1 { left: -2%; } .fc2 { right: -2%; }
+    .gs1 { left: -10px; } .gs2 { right: -8px; }
+    .menu-admin-card { right: -8px; }
+    .types-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 900px) {
+    section { padding: 76px 0; }
+    .nav-links, .nav-cta .btn { display: none; }
+    .hamburger { display: flex; }
+    .hero { padding: 130px 0 70px; min-height: auto; }
+    .hero-grid { grid-template-columns: 1fr; gap: 70px; }
+    .compare-grid, .show-grid, .show-grid.rev, .mgr-grid, .roles-grid, .menu-grid { grid-template-columns: 1fr; gap: 44px; }
+    .flow { grid-template-columns: repeat(2, 1fr); gap: 34px 18px; }
+    .flow::before { display: none; }
+    .flow-ico { box-shadow: 0 10px 30px rgba(3,8,18,0.4); }
+    .counters { grid-template-columns: repeat(2, 1fr); }
+    .types-grid { grid-template-columns: repeat(2, 1fr); }
+    .price-grid { grid-template-columns: 1fr; max-width: 460px; margin: 0 auto; }
+    .price-card.featured { transform: none; }
+    .price-card.featured:hover { transform: translateY(-6px); }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-visual { min-height: 300px; order: -1; }
+    .form-side { padding: 40px 26px; }
+    .fields { grid-template-columns: 1fr; }
+    .roles-img { order: 2; }
+    .mgr-visual { margin-top: 30px; }
+    .banner { background-attachment: scroll; }
+  }
+  @media (max-width: 520px) {
+    .types-grid { grid-template-columns: 1fr; }
+    .phone { width: 280px; }
+    .float-card { display: none; }
+    .menu-admin-card { position: static; width: 100%; margin-top: 14px; animation: none; }
+    .gs1, .gs2, .gs3 { position: static; display: inline-block; margin: 10px 8px 0 0; animation: none; }
+    .mgr-visual .room-img { aspect-ratio: 4/3; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== NAV ==================== -->
+<nav id="nav">
+  <div class="container nav-inner">
+    <a href="#" class="logo"><span class="logo-mark">H</span>Hotel<em>Flow</em></a>
+    <div class="nav-links">
+      <a href="#degisim">Neden HotelFlow</a>
+      <a href="#urun">Ürün</a>
+      <a href="#akis">Nasıl Çalışır</a>
+      <a href="#fiyatlandirma">Paketler</a>
+      <a href="#sss">SSS</a>
+    </div>
+    <div class="nav-cta">
+      <a href="#demo" class="btn btn-gold btn-sm">Demo Talep Et</a>
+      <button class="hamburger" id="hamburger" aria-label="Menü">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#degisim">Neden HotelFlow</a>
+  <a href="#urun">Ürün</a>
+  <a href="#akis">Nasıl Çalışır</a>
+  <a href="#fiyatlandirma">Paketler</a>
+  <a href="#sss">SSS</a>
+  <a href="#demo" class="btn btn-gold">Demo Talep Et</a>
+</div>
+
+<!-- ==================== HERO ==================== -->
+<header class="hero">
+  <div class="hero-bg" id="heroBg"></div>
+  <div class="hero-glow g1"></div>
+  <div class="hero-glow g2"></div>
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow">Oteller için Dijital Resepsiyon &amp; Operasyon Sistemi</span>
+      <h1>Resepsiyon Telefonlarını <em>QR Kod</em> ile Dijitale Taşıyın</h1>
+      <p class="lead">
+        Misafirler oda içindeki QR kodu tarar; temizlik, oda servisi, teknik destek,
+        kahvaltı ve özel talepler saniyeler içinde doğru personele ulaşır.
+        Siz de tüm operasyonu tek ekrandan izlersiniz.
+      </p>
+      <div class="hero-ctas">
+        <a href="#urun" class="btn btn-gold btn-lg">Canlı Demoyu Gör</a>
+        <a href="#demo" class="btn btn-ghost btn-lg">Oteliniz İçin Teklif Al</a>
+      </div>
+
+      <div class="trust-strip">
+        <div class="trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Uygulama indirme gerekmez</div>
+        <div class="trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Odaya özel QR kod</div>
+        <div class="trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Personel görev takibi</div>
+        <div class="trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Menü ve fiyat yönetimi</div>
+        <div class="trust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Çok dilli altyapıya hazır</div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="float-card fc1">
+        <span class="fc-ico">🔔</span><b style="display:inline;">Yeni talep</b>
+        <small style="display:block; margin-top:4px;">Oda 304 · Ekstra havlu · Kat Hizmetleri</small>
+      </div>
+      <div class="float-card fc2">
+        <span class="fc-ico">✅</span><b style="display:inline;">Görev tamamlandı</b>
+        <small style="display:block; margin-top:4px;">Oda 217 · Klima arızası · 18 dk</small>
+      </div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="ph-header">
+            <div class="hname">Bosphorus Palace Hotel</div>
+            <div class="room">
+              <b>Oda 304 · Deluxe</b>
+              <span class="ph-chip">Hoş geldiniz</span>
+            </div>
+          </div>
+          <div class="ph-body">
+            <div class="ph-label">Hızlı Talepler</div>
+            <div class="ph-quick">
+              <div class="ph-qitem"><span class="qi">🧹</span>Temizlik</div>
+              <div class="ph-qitem"><span class="qi">🍳</span>Kahvaltı</div>
+              <div class="ph-qitem"><span class="qi">🔧</span>Teknik</div>
+              <div class="ph-qitem"><span class="qi">🛏️</span>Havlu</div>
+              <div class="ph-qitem"><span class="qi">🚕</span>Taksi</div>
+              <div class="ph-qitem"><span class="qi">🕐</span>Geç Çıkış</div>
+            </div>
+            <div class="ph-req">
+              <div class="ph-req-top">
+                <b>🍽️ Oda Servisi Siparişi</b>
+                <span class="ph-status">Yolda</span>
+              </div>
+              <div class="ph-track">
+                <div class="ph-dot"></div><div class="ph-line"></div>
+                <div class="ph-dot"></div><div class="ph-line"></div>
+                <div class="ph-dot"></div><div class="ph-line off"></div>
+                <div class="ph-dot off"></div>
+              </div>
+              <div class="ph-track-labels">
+                <span>Alındı</span><span>Hazırlanıyor</span><span>Yolda</span><span>Kapıda</span>
+              </div>
+              <div class="ph-eta">Tahmini varış: <b>~8 dk</b> · Mehmet K. getiriyor</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ==================== COMPARISON ==================== -->
+<section id="degisim">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Otelinizde Ne Değişir?</span>
+      <h2>Telefon trafiğinden, sessiz ve ölçülebilir bir operasyona</h2>
+      <p>Aynı otel, aynı ekip — sadece talepler artık kaybolmuyor. İki düzen arasındaki farkı yan yana görün.</p>
+    </div>
+
+    <div class="compare-wrap">
+      <div class="vs-badge">VS</div>
+      <div class="compare-grid">
+        <div class="compare-col old reveal">
+          <h3>📞 Eski düzen</h3>
+          <div class="cmp-card"><div class="cmp-ico">☎️</div><div><b>Resepsiyon telefonu sürekli çalar</b><p>Yoğun saatlerde misafir hatta bekler, ekip stres altında çalışır.</p></div></div>
+          <div class="cmp-card"><div class="cmp-ico">📝</div><div><b>Talepler not defterine yazılır</b><p>Kağıtlar kaybolur, vardiya değişiminde bilgi uçar.</p></div></div>
+          <div class="cmp-card"><div class="cmp-ico">🤷</div><div><b>Personel kimin ne yaptığını karıştırır</b><p>Aynı odaya iki kişi gider, başka talep sahipsiz kalır.</p></div></div>
+          <div class="cmp-card"><div class="cmp-ico">⏳</div><div><b>Misafir bekler, bilgi alamaz</b><p>"Havlu ne zaman gelecek?" sorusu için tekrar aramak zorunda kalır.</p></div></div>
+          <div class="cmp-card"><div class="cmp-ico">📉</div><div><b>Yönetici operasyonu ölçemez</b><p>Kaç talep geldi, ne kadar sürede çözüldü — kimse bilmez.</p></div></div>
+        </div>
+
+        <div class="compare-col new reveal d1">
+          <h3>✦ HotelFlow ile</h3>
+          <div class="cmp-card"><div class="cmp-ico">📲</div><div><b>Talep QR ile panele düşer</b><p>Telefon susar; her talep kayıt altında, zaman damgalı.</p></div></div>
+          <div class="cmp-card"><div class="cmp-ico">🧭</div><div><b>Otomatik departmana yönlenir</b><p>Temizlik kat hizmetlerine, arıza teknik servise — elle dağıtım yok.</p></div></div>
+          <div class="cmp-card"><div class="cmp-ico">📱</div><div><b>Personel görevini mobilden görür</b><p>Kim, hangi odada, hangi işte — herkes kendi listesine bakar.</p></div></div>
+          <div class="cmp-card"><div class="cmp-ico">🔔</div><div><b>Misafir durumu canlı takip eder</b><p>"Hazırlanıyor → Yolda → Kapıda" — sormadan bilir, tekrar aramaz.</p></div></div>
+          <div class="cmp-card"><div class="cmp-ico">📊</div><div><b>Yönetici her şeyi dashboard'dan izler</b><p>Talep hacmi, çözüm süresi, departman yoğunluğu tek ekranda.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PRODUCT SHOWCASE (TABS) ==================== -->
+<section class="light" id="urun">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Ürün Önizleme</span>
+      <h2>Üç ekran, tek kusursuz operasyon</h2>
+      <p>Misafirin telefonundan yöneticinin dashboard'una — aynı talep her ekranda doğru kişiye, doğru biçimde görünür.</p>
+    </div>
+
+    <div class="tabs reveal" role="tablist">
+      <button class="tab-btn active" data-tab="guest">Misafir Deneyimi</button>
+      <button class="tab-btn" data-tab="admin">Yönetici Kontrolü</button>
+      <button class="tab-btn" data-tab="staff">Personel Akışı</button>
+    </div>
+
+    <!-- GUEST TAB -->
+    <div class="show-panel active" id="tab-guest">
+      <div class="show-grid">
+        <div class="phone-wrap">
+          <div class="phone static">
+            <div class="phone-screen">
+              <div class="ph-header">
+                <div class="hname">Bosphorus Palace Hotel</div>
+                <div class="room"><b>Oda 304 · Deluxe</b><span class="ph-chip">TR · EN</span></div>
+              </div>
+              <div class="ph-body">
+                <div class="ph-label">Menüden Sipariş</div>
+                <div class="ph-req" style="margin-top: 0;">
+                  <div class="ph-req-top"><b>🍳 Serpme Kahvaltı (2 kişi)</b><b style="color: var(--gold-dark);">₺850</b></div>
+                  <div class="ph-req-top" style="margin-bottom: 0;"><b>☕ Türk Kahvesi × 2</b><b style="color: var(--gold-dark);">₺180</b></div>
+                </div>
+                <div class="ph-req">
+                  <div class="ph-req-top">
+                    <b>Sipariş Durumu</b>
+                    <span class="ph-status amber">Hazırlanıyor</span>
+                  </div>
+                  <div class="ph-track">
+                    <div class="ph-dot"></div><div class="ph-line"></div>
+                    <div class="ph-dot"></div><div class="ph-line off"></div>
+                    <div class="ph-dot off"></div><div class="ph-line off"></div>
+                    <div class="ph-dot off"></div>
+                  </div>
+                  <div class="ph-track-labels">
+                    <span>Alındı</span><span>Mutfakta</span><span>Yolda</span><span>Kapıda</span>
+                  </div>
+                  <div class="ph-eta">Tahmini süre: <b>~25 dk</b></div>
+                </div>
+                <div class="ph-label" style="margin-top: 12px;">Otel Bilgileri</div>
+                <div class="ph-quick" style="grid-template-columns: repeat(3, 1fr);">
+                  <div class="ph-qitem"><span class="qi">📶</span>Wi-Fi</div>
+                  <div class="ph-qitem"><span class="qi">🏊</span>Havuz</div>
+                  <div class="ph-qitem"><span class="qi">🚨</span>Acil</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="show-copy">
+          <span class="eyebrow">Misafir Ekranı</span>
+          <h3>Kurulumsuz, beklemesiz, kargo takibi rahatlığında</h3>
+          <p>Misafir odadaki QR kartı telefon kamerasıyla tarar; oda numarası otomatik tanınır, hizmet ekranı anında açılır. Uygulama yok, üyelik yok, şifre yok.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>14 hizmet kategorisi: temizlikten spa randevusuna</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Fiyatlı menüden sepetli sipariş, not ve aciliyet seçeneği</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Adım adım canlı durum takibi ve anlık bildirim</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Wi-Fi, saatler, kurallar ve acil numaralar tek dokunuşta</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN TAB -->
+    <div class="show-panel" id="tab-admin">
+      <div class="show-grid rev">
+        <div class="show-copy">
+          <span class="eyebrow">Yönetici Paneli</span>
+          <h3>Bütün oteli tek ekrandan yönetin</h3>
+          <p>Hangi oda dolu, hangi talep bekliyor, hangi departman yoğun — hepsi canlı. Talepleri önceliklendirin, personele atayın, QR kartları yazdırın.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Canlı dashboard: talep hacmi, çözüm süresi, grafikler</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Oda &amp; QR kart yönetimi — yazdırmaya hazır kartlar</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Menü, fiyat ve stok yönetimi; onay gerektiren işlemler</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Personel performansı ve departman yoğunluk görünümü</li>
+          </ul>
+        </div>
+        <div class="browser">
+          <div class="browser-bar">
+            <div class="b-dots"><span></span><span></span><span></span></div>
+            <div class="b-url">app.hotelflow.com/admin</div>
+          </div>
+          <div class="dash">
+            <div class="dash-side">
+              <div class="dlogo">Hotel<em>Flow</em></div>
+              <div class="dnav">
+                <span class="on">📊 Dashboard</span>
+                <span>📋 Talepler</span>
+                <span>🚪 Odalar &amp; QR</span>
+                <span>👥 Personel</span>
+                <span>🍽️ Menü Yönetimi</span>
+                <span>⚙️ Ayarlar</span>
+              </div>
+            </div>
+            <div class="dash-main">
+              <div class="dash-top">
+                <b>Günaydın, Otel Müdürü 👋</b>
+                <div class="dash-bell">🔔<i>3</i></div>
+              </div>
+              <div class="dash-metrics">
+                <div class="dm"><small>Dolu Oda</small><b>38<span style="font-size:11px;color:var(--ink-soft);">/52</span></b> <span class="up">%73</span></div>
+                <div class="dm"><small>Açık Talep</small><b>12</b> <span class="up">▼ dün 19</span></div>
+                <div class="dm"><small>Acil</small><b style="color:var(--red);">2</b> <span class="warn">müdahale</span></div>
+                <div class="dm"><small>Ort. Çözüm</small><b>14<span style="font-size:11px;color:var(--ink-soft);">dk</span></b> <span class="up">▼ 3dk</span></div>
+              </div>
+              <div class="dash-cols">
+                <div class="dash-box">
+                  <h5>Departman Yoğunluğu</h5>
+                  <div class="bars">
+                    <div class="bar" style="height: 52%;"></div>
+                    <div class="bar gold" style="height: 92%;"></div>
+                    <div class="bar" style="height: 38%;"></div>
+                    <div class="bar" style="height: 66%;"></div>
+                    <div class="bar" style="height: 28%;"></div>
+                  </div>
+                  <div class="bar-labels"><span>Resep.</span><span>Kat Hiz.</span><span>Teknik</span><span>Mutfak</span><span>Spa</span></div>
+                </div>
+                <div class="dash-box">
+                  <h5>Son Talepler</h5>
+                  <div class="req-row"><div class="rico">🧹</div><div class="rtxt"><b>Oda temizliği — 412</b><small>2 dk önce</small></div><span class="pill amber">Atandı</span></div>
+                  <div class="req-row"><div class="rico">🍳</div><div class="rtxt"><b>Kahvaltı siparişi — 304</b><small>6 dk önce</small></div><span class="pill blue">Mutfakta</span></div>
+                  <div class="req-row"><div class="rico">🔧</div><div class="rtxt"><b>Klima arızası — 217</b><small>9 dk önce</small></div><span class="pill red">Acil</span></div>
+                  <div class="req-row"><div class="rico">🛏️</div><div class="rtxt"><b>Ekstra havlu — 118</b><small>14 dk önce</small></div><span class="pill green">Tamamlandı</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAFF TAB -->
+    <div class="show-panel" id="tab-staff">
+      <div class="show-grid">
+        <div class="phone-wrap">
+          <div class="phone static">
+            <div class="phone-screen">
+              <div class="ph-header">
+                <div class="hname">Personel Paneli</div>
+                <div class="room"><b>Ayşe D. · Kat Hizmetleri</b><span class="ph-chip">3 görev</span></div>
+              </div>
+              <div class="ph-body">
+                <div class="ph-label">Bugünkü Görevlerim</div>
+                <div class="stf-task">
+                  <div class="stf-top"><b>🧹 Oda temizliği — Oda 412</b><span class="ph-status amber">Sırada</span></div>
+                  <div class="stf-meta">Misafir odada değil · Not: "Ekstra yastık bırakır mısınız?"</div>
+                  <div class="stf-actions">
+                    <span class="stf-btn primary">Göreve Başla</span>
+                    <span class="stf-btn soft">Detay</span>
+                  </div>
+                </div>
+                <div class="stf-task">
+                  <div class="stf-top"><b>🛏️ Havlu değişimi — Oda 118</b><span class="ph-status">Yolda</span></div>
+                  <div class="stf-meta">Kapıdan önce arayın · Tahmini 5 dk</div>
+                  <div class="stf-actions">
+                    <span class="stf-btn primary">Kapıdayım</span>
+                    <span class="stf-btn soft">Not Ekle</span>
+                  </div>
+                </div>
+                <div class="stf-task" style="opacity: 0.65;">
+                  <div class="stf-top"><b>🧺 Nevresim — Oda 205</b><span class="ph-status">Tamamlandı</span></div>
+                  <div class="stf-meta">Bugün 09:41 · 12 dakikada çözüldü ✓</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="show-copy">
+          <span class="eyebrow">Personel Ekranı</span>
+          <h3>Her personel yalnızca kendi işini görür</h3>
+          <p>Kat görevlisi temizlik taleplerini, teknisyen arızaları, mutfak siparişleri görür. Karışıklık yok, unutulan iş yok.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Kişiye ve departmana özel görev listesi</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Tek dokunuşla durum güncelleme: "Yolda", "Kapıda", "Tamamlandı"</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Her güncelleme misafirin ekranına anında yansır</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Misafir notları ve oda detayları elinin altında</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== WORKFLOW ==================== -->
+<section id="akis">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Nasıl Çalışır</span>
+      <h2>QR'dan personele kadar tüm süreç</h2>
+      <p>Talep hiçbir noktada insan hafızasına emanet edilmez — sistem her adımı kaydeder ve yönlendirir.</p>
+    </div>
+    <div class="flow" id="flowTimeline">
+      <div class="flow-step">
+        <span class="flow-num">01</span>
+        <div class="flow-ico">📷</div>
+        <b>QR kodu tarar</b>
+        <p>Misafir odadaki karta kamerayı tutar; oda otomatik tanınır.</p>
+      </div>
+      <div class="flow-step">
+        <span class="flow-num">02</span>
+        <div class="flow-ico">📝</div>
+        <b>Talep oluşturur</b>
+        <p>Kategori seçer, not ekler; siparişte sepetini onaylar.</p>
+      </div>
+      <div class="flow-step">
+        <span class="flow-num">03</span>
+        <div class="flow-ico">🖥️</div>
+        <b>Panele düşer</b>
+        <p>Talep anında yönetici panelinde, zaman damgalı.</p>
+      </div>
+      <div class="flow-step">
+        <span class="flow-num">04</span>
+        <div class="flow-ico">🧭</div>
+        <b>Departmana yönlenir</b>
+        <p>Sistem doğru ekibi otomatik seçer; acil talepler öne alınır.</p>
+      </div>
+      <div class="flow-step">
+        <span class="flow-num">05</span>
+        <div class="flow-ico">🛎️</div>
+        <b>Personel tamamlar</b>
+        <p>Görevli mobil ekranından durumu adım adım günceller.</p>
+      </div>
+      <div class="flow-step">
+        <span class="flow-num">06</span>
+        <div class="flow-ico">📲</div>
+        <b>Misafir canlı izler</b>
+        <p>"Yolda", "Kapıda" bildirimleri anında telefonuna düşer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== MANAGER DASHBOARD ==================== -->
+<section id="yonetim" style="padding-top: 40px;">
+  <div class="container">
+    <div class="mgr-grid">
+      <div class="reveal">
+        <span class="eyebrow">Yönetici Deneyimi</span>
+        <h2 style="font-size: clamp(28px, 3.4vw, 40px); line-height: 1.2; margin: 18px 0 14px;">Yönetici için tek ekranda operasyon kontrolü</h2>
+        <p style="color: rgba(247,242,232,0.62); font-size: 16.5px;">
+          Otelinizin nabzı artık bir dashboard: hangi oda dolu, hangi talep gecikti,
+          hangi ürün stokta yok — sormadan görün, veriyle yönetin.
+        </p>
+        <div class="mgr-cards">
+          <div class="mgr-card"><div class="mi">🚪</div><b>Dolu / boş oda sayısı</b><small>Kat kat doluluk ve oda durumu görünümü</small></div>
+          <div class="mgr-card"><div class="mi">📋</div><b>Açık talepler</b><small>Bekleyen, atanan ve süren tüm işler</small></div>
+          <div class="mgr-card"><div class="mi">🚨</div><b>Acil talepler</b><small>Öncelikli işler her zaman en üstte</small></div>
+          <div class="mgr-card"><div class="mi">⏱️</div><b>Ortalama çözüm süresi</b><small>Departman bazında performans metriği</small></div>
+          <div class="mgr-card"><div class="mi">📈</div><b>En yoğun departman</b><small>Vardiya planını veriye göre kurun</small></div>
+          <div class="mgr-card"><div class="mi">📦</div><b>Stokta olmayan ürünler</b><small>Menüde tükenenler anında görünür</small></div>
+          <div class="mgr-card"><div class="mi">🍽️</div><b>Bugün gelen siparişler</b><small>Oda servisi ciro ve adet özeti</small></div>
+          <div class="mgr-card"><div class="mi">🏅</div><b>Personel performansı</b><small>Tamamlanan görev ve çözüm hızları</small></div>
+        </div>
+      </div>
+      <div class="mgr-visual reveal d1">
+        <div class="room-img"></div>
+        <div class="glass-stat gs1"><b>%73</b><small>Doluluk — canlı</small></div>
+        <div class="glass-stat gs2"><b>14 dk</b><small>Ortalama çözüm süresi</small></div>
+        <div class="glass-stat gs3"><b>127</b><small>Bugün tamamlanan görev</small></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PARALLAX BANNER + COUNTERS ==================== -->
+<div class="banner">
+  <div class="container">
+    <div class="banner-quote reveal">
+      <p>"Misafir beklemez, personel karıştırmaz, yönetici tahmin etmez — <em>herkes bilir.</em>"</p>
+    </div>
+    <div class="counters" id="counters">
+      <div class="counter-item reveal"><b><span data-count="14">0</span></b><span>Hizmet kategorisi</span></div>
+      <div class="counter-item reveal d1"><b><span data-count="7">0</span></b><span>Adımlı canlı talep takibi</span></div>
+      <div class="counter-item reveal d2"><b><span data-count="60">0</span><sup>sn</sup></b><span>Talebin personele ulaşma süresi</span></div>
+      <div class="counter-item reveal d3"><b><span data-count="0">0</span></b><span>Kaybolan talep</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ROLES ==================== -->
+<section class="light" id="ekip">
+  <div class="container">
+    <div class="roles-grid">
+      <div class="roles-img reveal">
+        <div class="glass-stat" style="left: 26px; bottom: 26px; right: 26px; position: absolute;">
+          <b>Kat Hizmetleri · Ayşe D.</b>
+          <small>3 görev tamamlandı · ort. 11 dk · ⭐ 4,9</small>
+        </div>
+      </div>
+      <div class="reveal d1">
+        <span class="eyebrow">Yetki &amp; Personel Yönetimi</span>
+        <h2 style="font-size: clamp(28px, 3.4vw, 40px); line-height: 1.2; margin: 18px 0 14px; color: var(--ink);">Sadece talep sistemi değil, otelinizin operasyon paneli</h2>
+        <p style="color: var(--ink-soft); font-size: 16.5px; margin-bottom: 6px;">
+          Her rol kendi ekranını görür, kendi yetkisiyle çalışır. Kimse başkasının işine karışmaz,
+          hiçbir iş sahipsiz kalmaz.
+        </p>
+        <div class="role-chips">
+          <span class="role-chip">👔 Otel Yöneticisi</span>
+          <span class="role-chip">🛎️ Resepsiyon</span>
+          <span class="role-chip">🧹 Housekeeping</span>
+          <span class="role-chip">🔧 Teknik Servis</span>
+          <span class="role-chip">🍽️ Room Service</span>
+          <span class="role-chip">👨‍🍳 Aşçı / Mutfak</span>
+          <span class="role-chip">💆 Spa Personeli</span>
+        </div>
+        <div class="roles-note">
+          <b>Her personel sadece kendi görevini görür.</b> Yönetici ise oda durumlarını, menüleri,
+          fiyatları ve onay süreçlerini tek yerden kontrol eder.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== MENU MANAGEMENT ==================== -->
+<section class="light" id="menu" style="padding-top: 0;">
+  <div class="container">
+    <div class="menu-grid">
+      <div class="reveal">
+        <span class="eyebrow">Kahvaltı &amp; Menü Yönetimi</span>
+        <h2 style="font-size: clamp(28px, 3.4vw, 40px); line-height: 1.2; margin: 18px 0 14px; color: var(--ink);">Menünüz kağıtta değil, kontrolünüz altında</h2>
+        <p style="color: var(--ink-soft); font-size: 16.5px;">
+          Kahvaltıdan gece atıştırmalıklarına kadar tüm menü dijital. Fiyat değişiklikleri
+          saniyeler içinde misafir ekranına yansır — baskı maliyeti yok, eski fiyat karmaşası yok.
+        </p>
+        <ul class="feature-list">
+          <li><div class="fi">🍳</div><div><b>Kahvaltı ürünleri eklenebilir</b><p>Serpme, açık büfe, oda kahvaltısı — dilediğiniz kurguda.</p></div></li>
+          <li><div class="fi">🔄</div><div><b>Ürünler aktif / pasif yapılabilir</b><p>Sezonluk ürünleri tek dokunuşla menüden kaldırın.</p></div></li>
+          <li><div class="fi">💰</div><div><b>Fiyatlar yönetici tarafından değiştirilebilir</b><p>Anında ve tüm odalarda aynı anda güncellenir.</p></div></li>
+          <li><div class="fi">👨‍🍳</div><div><b>Aşçı stok durumunu güncelleyebilir</b><p>Tükenen ürün misafir ekranında otomatik gizlenir.</p></div></li>
+          <li><div class="fi">✅</div><div><b>Onay isteyen işlemler yöneticiye düşer</b><p>Kritik değişiklikler yönetici onayı olmadan yayınlanmaz.</p></div></li>
+        </ul>
+      </div>
+      <div class="menu-visual reveal d1">
+        <div class="menu-img"></div>
+        <div class="menu-admin-card">
+          <h5>Menü Yönetimi — Kahvaltı</h5>
+          <div class="mi-row"><div class="nm"><b>Serpme Kahvaltı</b><small>₺850 · 2 kişilik</small></div><div class="toggle on"></div></div>
+          <div class="mi-row"><div class="nm"><b>Menemen</b><small>₺220 · stokta</small></div><div class="toggle on"></div></div>
+          <div class="mi-row"><div class="nm"><b>Pancake Tabağı</b><small>₺260 · stok bitti</small></div><div class="toggle"></div></div>
+          <div class="mi-row"><div class="nm"><b>Türk Kahvesi</b><small>₺90 · stokta</small></div><div class="toggle on"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== HOTEL TYPES ==================== -->
+<section id="oteller">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Her Otel Tipine Uygun</span>
+      <h2>Butik otelden tatil köyüne, aynı düzen</h2>
+      <p>HotelFlow oda sayısına göre değil, operasyonunuza göre ölçeklenir.</p>
+    </div>
+    <div class="types-grid">
+      <div class="type-card reveal">
+        <div class="type-img" style="background-image: url('https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=700&auto=format&fit=crop');"></div>
+        <div class="type-body"><b>Butik Oteller</b><p>Az personelle çok iş: talepler tek panelde toplanır, küçük ekip büyük otel disipliniyle çalışır.</p></div>
+      </div>
+      <div class="type-card reveal d1">
+        <div class="type-img" style="background-image: url('https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=700&auto=format&fit=crop');"></div>
+        <div class="type-body"><b>Şehir Otelleri</b><p>Yoğun giriş-çıkışta resepsiyon rahatlar; geç çıkış ve taksi talepleri telefonsuz yönetilir.</p></div>
+      </div>
+      <div class="type-card reveal d2">
+        <div class="type-img" style="background-image: url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=700&auto=format&fit=crop');"></div>
+        <div class="type-body"><b>Tatil Otelleri</b><p>Havuzdan odaya sipariş, plaj havlusu talebi, animasyon bilgisi — misafir nerede olursa olsun ulaşır.</p></div>
+      </div>
+      <div class="type-card reveal d3">
+        <div class="type-img" style="background-image: url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=700&auto=format&fit=crop');"></div>
+        <div class="type-body"><b>Apart Oteller</b><p>Resepsiyonsuz saatlerde bile talepler kayıt altında; misafir kendini hiç yalnız hissetmez.</p></div>
+      </div>
+      <div class="type-card reveal d4">
+        <div class="type-img" style="background-image: url('https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=700&auto=format&fit=crop');"></div>
+        <div class="type-body"><b>Spa Otelleri</b><p>Masaj ve wellness randevuları QR üzerinden alınır; spa ekibi kendi takvimini kendi yönetir.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PRICING ==================== -->
+<section class="light" id="fiyatlandirma">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Paketler</span>
+      <h2>Otelinizin ölçeğine göre başlayın</h2>
+      <p>Tüm paketler kurulum desteği içerir. Fiyat, oda sayınıza ve ihtiyaçlarınıza göre birlikte netleştirilir.</p>
+    </div>
+    <div class="price-grid">
+      <div class="price-card reveal">
+        <span class="tier">Başlangıç</span>
+        <h3>Dijital Resepsiyon</h3>
+        <p class="pdesc">QR ile talep almaya bugün başlayın.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>QR misafir ekranı</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Temel talep yönetimi</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Oda bazlı QR kod üretimi</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Demo dashboard</li>
+        </ul>
+        <a href="#demo" class="btn btn-navy">Teklif Al</a>
+      </div>
+
+      <div class="price-card featured reveal d1">
+        <span class="price-badge">En Çok Tercih Edilen</span>
+        <span class="tier">Profesyonel</span>
+        <h3>Tam Operasyon</h3>
+        <p class="pdesc">Misafirden mutfağa uçtan uca yönetim.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Başlangıç paketindeki her şey</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Personel paneli ve görev takibi</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Menü ve fiyat yönetimi</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Kahvaltı yönetimi</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Oda durumu yönetimi</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Rol bazlı yetkiler</li>
+        </ul>
+        <a href="#demo" class="btn btn-gold">Teklif Al</a>
+      </div>
+
+      <div class="price-card reveal d2">
+        <span class="tier">Kurumsal</span>
+        <h3>Zincir &amp; Grup</h3>
+        <p class="pdesc">Birden fazla otel, tek yönetim standardı.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Çoklu otel desteği</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Gelişmiş raporlar</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Özel entegrasyon</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Çok dilli yapı</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Öncelikli destek</li>
+        </ul>
+        <a href="#demo" class="btn btn-navy">Teklif Al</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== DEMO FORM ==================== -->
+<section id="demo">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Demo Talebi</span>
+      <h2>Otelinizde görmeden karar vermeyin</h2>
+      <p>Formu doldurun; size özel bir demo ortamı hazırlayalım, oda sayınıza göre teklifinizi birlikte çıkaralım.</p>
+    </div>
+    <div class="form-grid reveal">
+      <div class="form-side">
+        <span class="eyebrow">Ücretsiz &amp; Yükümlülüksüz</span>
+        <h3>Demo Talep Formu</h3>
+        <p>Ekibimiz bir iş günü içinde dönüş yapar.</p>
+        <form id="demoForm">
+          <div class="fields">
+            <div class="field"><label for="f-hotel">Otel Adı</label><input id="f-hotel" type="text" placeholder="Örn. Bosphorus Palace Hotel" required /></div>
+            <div class="field"><label for="f-name">Yetkili Adı</label><input id="f-name" type="text" placeholder="Ad Soyad" required /></div>
+            <div class="field"><label for="f-phone">Telefon</label><input id="f-phone" type="tel" placeholder="05xx xxx xx xx" required /></div>
+            <div class="field"><label for="f-email">E-posta</label><input id="f-email" type="email" placeholder="ornek@otel.com" required /></div>
+            <div class="field full"><label for="f-rooms">Oda Sayısı</label><input id="f-rooms" type="number" min="1" placeholder="Örn. 52" /></div>
+            <div class="field full"><label for="f-msg">Mesajınız</label><textarea id="f-msg" placeholder="Otelinizin ihtiyaçlarından kısaca bahsedin…"></textarea></div>
+          </div>
+          <button type="submit" class="btn btn-gold btn-lg">Demo Talep Et</button>
+          <div class="form-success" id="formSuccess">✓ Talebiniz alındı. Ekibimiz en kısa sürede sizinle iletişime geçecek.</div>
+        </form>
+      </div>
+      <div class="form-visual">
+        <div class="glass-stat">
+          <b>Kurulum ortalama 1 gün</b>
+          <small>QR kartlar yazdırılır, menü yüklenir, ekip 30 dakikalık eğitimle başlar.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FAQ ==================== -->
+<section class="light" id="sss">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Merak Edilenler</span>
+      <h2>Sık sorulan sorular</h2>
+    </div>
+    <div class="faq-wrap reveal">
+      <details class="faq">
+        <summary>Misafir uygulama indirmek zorunda mı?<span class="faq-plus">+</span></summary>
+        <div class="faq-body">Hayır. Misafir QR kodu telefon kamerasıyla tarar, sistem tarayıcıda anında açılır. Uygulama, üyelik veya şifre gerekmez — bu, kullanım oranını dramatik şekilde artırır.</div>
+      </details>
+      <details class="faq">
+        <summary>QR kodlar odaya özel mi?<span class="faq-plus">+</span></summary>
+        <div class="faq-body">Evet. Her oda için ayrı QR kod üretilir; misafir taradığında oda numarası otomatik tanınır. Talep hangi odadan geldiyse panelde o odayla eşleşir. QR kartlar yönetici panelinden yazdırmaya hazır olarak üretilir.</div>
+      </details>
+      <details class="faq">
+        <summary>Personel kendi görevlerini görebilir mi?<span class="faq-plus">+</span></summary>
+        <div class="faq-body">Evet. Her personel yalnızca kendisine ve departmanına atanan görevleri görür. Kat görevlisi temizlik taleplerini, teknisyen arızaları, mutfak siparişleri görür — yetki dışı hiçbir ekran açılmaz.</div>
+      </details>
+      <details class="faq">
+        <summary>Menü ve fiyat yönetimi yapılabilir mi?<span class="faq-plus">+</span></summary>
+        <div class="faq-body">Evet. Yönetici panelinden ürün ekleyebilir, fiyat değiştirebilir, ürünleri aktif/pasif yapabilirsiniz. Değişiklikler tüm oda ekranlarına anında yansır.</div>
+      </details>
+      <details class="faq">
+        <summary>Aşçı sadece kahvaltıyı yönetebilir mi?<span class="faq-plus">+</span></summary>
+        <div class="faq-body">Evet. Rol bazlı yetki sistemi sayesinde mutfak personeline yalnızca menü ve stok yetkisi verebilirsiniz. Aşçı tükenen ürünü işaretler, ürün misafir menüsünden otomatik gizlenir; fiyat değişikliği gibi kritik işlemler yönetici onayına düşer.</div>
+      </details>
+      <details class="faq">
+        <summary>Sistem çok dilli olabilir mi?<span class="faq-plus">+</span></summary>
+        <div class="faq-body">Altyapı çok dilli kullanıma hazır tasarlandı; hizmet kategorileri Türkçe ve İngilizce isimleriyle tanımlı. Kurumsal pakette misafir ekranı için ek dil desteği projelendirilir.</div>
+      </details>
+      <details class="faq">
+        <summary>Oda durumu yönetimi var mı?<span class="faq-plus">+</span></summary>
+        <div class="faq-body">Evet. Odalar "dolu, boş, temizleniyor, bakımda" durumlarıyla izlenir; giriş-çıkış tarihleri, misafir bilgisi ve son temizlik zamanı panelde tutulur. Housekeeping planlaması bu görünüm üzerinden yapılır.</div>
+      </details>
+      <details class="faq">
+        <summary>Otelin mevcut sistemlerine bağlanabilir mi?<span class="faq-plus">+</span></summary>
+        <div class="faq-body">Kurumsal pakette PMS ve POS gibi mevcut sistemlerinizle özel entegrasyon projelendirilir. Altyapı, modern API tabanlı mimarisi sayesinde entegrasyona hazır kurgulandı.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FINAL CTA ==================== -->
+<section class="final-cta">
+  <div class="container reveal">
+    <span class="eyebrow" style="justify-content: center;">Modern Oteller Böyle Çalışıyor</span>
+    <h2 style="margin-top: 18px;">Resepsiyonunuz sussun,<br /><em>oteliniz konuşsun.</em></h2>
+    <p>Misafir memnuniyeti telefonda bekleyerek değil, talebin dakikalar içinde kapıya gelmesiyle kazanılır. İlk QR kodunuzu birlikte asalım.</p>
+    <div class="hero-ctas" style="justify-content: center;">
+      <a href="#demo" class="btn btn-gold btn-lg">Demo Talep Et</a>
+      <a href="#urun" class="btn btn-ghost btn-lg">Ürünü İncele</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container foot-inner">
+    <a href="#" class="logo" style="font-size: 19px;"><span class="logo-mark" style="width: 30px; height: 30px; font-size: 14px;">H</span>Hotel<em>Flow</em></a>
+    <div class="foot-links">
+      <a href="#degisim">Neden HotelFlow</a>
+      <a href="#fiyatlandirma">Paketler</a>
+      <a href="#sss">SSS</a>
+      <a href="#demo">İletişim</a>
+    </div>
+    <small>© 2026 HotelFlow — Oteller için dijital resepsiyon ve operasyon sistemi.</small>
+  </div>
+</footer>
+
+<script>
+(function () {
+  /* ---- sticky nav ---- */
+  var nav = document.getElementById('nav');
+  var onScroll = function () { nav.classList.toggle('scrolled', window.scrollY > 24); };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* ---- mobile menu ---- */
+  var burger = document.getElementById('hamburger');
+  var menu = document.getElementById('mobileMenu');
+  burger.addEventListener('click', function () {
+    menu.classList.toggle('open');
+    nav.classList.add('scrolled');
+  });
+  menu.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', function () { menu.classList.remove('open'); });
+  });
+
+  /* ---- hero parallax (desktop only, rAF-throttled) ---- */
+  var heroBg = document.getElementById('heroBg');
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (heroBg && !reduced && window.matchMedia('(min-width: 901px)').matches) {
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        var y = Math.min(window.scrollY, 900);
+        heroBg.style.transform = 'translateY(' + y * 0.18 + 'px)';
+        ticking = false;
+      });
+    }, { passive: true });
+  }
+
+  /* ---- scroll reveal ---- */
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+
+  /* ---- flow timeline ---- */
+  var flow = document.getElementById('flowTimeline');
+  if (flow) {
+    var fio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { flow.classList.add('in'); fio.disconnect(); }
+      });
+    }, { threshold: 0.25 });
+    fio.observe(flow);
+  }
+
+  /* ---- counters ---- */
+  function animateCount(el) {
+    var target = parseInt(el.getAttribute('data-count'), 10);
+    var dur = 1400, start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      var p = Math.min((ts - start) / dur, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  var counters = document.getElementById('counters');
+  if (counters) {
+    var cio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          counters.querySelectorAll('[data-count]').forEach(animateCount);
+          cio.disconnect();
+        }
+      });
+    }, { threshold: 0.4 });
+    cio.observe(counters);
+  }
+
+  /* ---- showcase tabs ---- */
+  var tabBtns = document.querySelectorAll('.tab-btn');
+  tabBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      tabBtns.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.show-panel').forEach(function (p) { p.classList.remove('active'); });
+      document.getElementById('tab-' + btn.getAttribute('data-tab')).classList.add('active');
+    });
+  });
+
+  /* ---- demo form (static) ---- */
+  var form = document.getElementById('demoForm');
+  if (form) {
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      document.getElementById('formSuccess').style.display = 'block';
+      form.querySelector('button[type="submit"]').textContent = 'Talebiniz Alındı ✓';
+      form.querySelector('button[type="submit"]').disabled = true;
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

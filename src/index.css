@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-display: "Fraunces", "Playfair Display", serif;
+
+  /* Brand palette — "Editorial Alpine": near-white paper + true ink text,
+     hairline borders and antique-brass accents. Inspired by grand alpine
+     hotel editorial sites (light, uncluttered, serif headlines, flat solid
+     buttons) rather than a dark "SaaS luxury" look. */
+  --color-navy-950: #0d0d0d;
+  --color-navy-900: #111111;
+  --color-navy-800: #1f1f1f;
+  --color-navy-700: #333333;
+  --color-navy-600: #4d4d4d;
+  --color-navy-500: #666666;
+  --color-navy-400: #888888;
+  --color-navy-300: #aaaaaa;
+
+  --color-cream-50: #fefefd;
+  --color-cream-100: #fcfbfa;
+  --color-cream-200: #f5f1e8;
+  --color-cream-300: #e6d3a3;
+
+  --color-line: #eaeaea;
+  --color-line-soft: #f2f2f2;
+
+  --color-gold-300: #e3cb98;
+  --color-gold-400: #c2a05f;
+  --color-gold-500: #a8823f;
+  --color-gold-600: #8a6830;
+
+  --color-emerald-500: #1f9d6b;
+  --color-emerald-600: #17805a;
+
+  --color-ruby-500: #b3413c;
+  --color-ruby-600: #932f2b;
+
+  --color-amber-500: #c98a2e;
+
+  --shadow-soft: 0 1px 2px rgba(17, 17, 17, 0.06);
+  --shadow-card: 0 1px 3px rgba(17, 17, 17, 0.05);
+  --shadow-lifted: 0 12px 32px rgba(17, 17, 17, 0.12), 0 4px 8px rgba(17, 17, 17, 0.06);
+  --shadow-gold: 0 8px 24px rgba(168, 130, 63, 0.2);
+}
+
+/* ---------------------------------------------------------------------------
+   Dark mode — "Editorial Alpine, Gece" (Night). Every existing utility class
+   (bg-cream-*, text-navy-*, ring-line, etc.) already compiles to
+   `var(--color-*)` under the hood (Tailwind v4), so re-pointing these custom
+   properties under [data-theme="dark"] re-themes the entire app — guest,
+   admin and staff panels alike — without touching component markup. Paper
+   and ink swap roles: cream (paper/surfaces) goes dark, navy (ink/text)
+   goes light. Accent colors (gold/emerald/ruby/amber) and navy-950 (used as
+   an intentionally-dark surface or as ink-on-gold-button text) are left
+   unchanged since they already read correctly on both backgrounds.
+   --------------------------------------------------------------------------- */
+[data-theme='dark'] {
+  --color-navy-900: #f5f3ef;
+  --color-navy-800: #e8e4dc;
+  --color-navy-700: #cfc9bd;
+  --color-navy-600: #a9a296;
+  --color-navy-500: #8b8478;
+  --color-navy-400: #79746a;
+  --color-navy-300: #5c584f;
+
+  --color-cream-50: #1c1b19;
+  --color-cream-100: #141312;
+  --color-cream-200: #262421;
+  --color-cream-300: #3a3630;
+
+  --color-line: #2f2d29;
+  --color-line-soft: #262421;
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-cream-100);
+    color: var(--color-navy-900);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-navy-500);
+    border-radius: 999px;
+    opacity: 0.3;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-lifted {
+    box-shadow: var(--shadow-lifted);
+  }
+  .shadow-gold {
+    box-shadow: var(--shadow-gold);
+  }
+  .bg-noise {
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  /* Subtle art-deco lattice — thin diagonal brass hairlines. Used instead of
+     (or layered under) .bg-noise on hero/signature surfaces for a distinct,
+     less "generic dark SaaS" texture. Kept very low-opacity on purpose. */
+  .bg-deco-pattern {
+    background-image:
+      linear-gradient(135deg, rgba(194, 160, 95, 0.06) 1px, transparent 1px),
+      linear-gradient(45deg, rgba(194, 160, 95, 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Offset for floating elements (e.g. the guest order cart bar) that sit
+     near the bottom of the screen — clears the safe area on notched
+     devices without assuming a fixed bottom navigation bar exists. */
+  .floating-bar-offset {
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer utilities {
+  @keyframes fade-slide-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in {
+    animation: fade-slide-in 0.22s ease-out;
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(217, 72, 72, 0.35); }
+    100% { box-shadow: 0 0 0 8px rgba(217, 72, 72, 0); }
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
