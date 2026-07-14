@@ -4,7 +4,7 @@
 
 Misafirler odalarındaki QR kodu tarayarak resepsiyonu aramadan temizlik, oda servisi, teknik destek, spa ve daha fazlasını talep eder. Yönetici ve personel panelleri bu talepleri gerçek zamanlı takip eder, rezervasyon takvimini yönetir ve operasyonel raporları görüntüler.
 
-`React 19` · `TypeScript` · `Tailwind CSS v4` · `Vite` · `React Router v7` — tamamen istemci tarafında çalışan, backend'siz bir demo/prototip (bkz. [Mimari](#mimari)).
+`React 19` · `TypeScript` · `Tailwind CSS v4` · `Vite` · `React Router v7` — tamamen istemci tarafında çalışan bir sistem
 
 ---
 
