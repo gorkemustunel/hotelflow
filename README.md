@@ -136,9 +136,9 @@ Uçtan uca test etmek için: misafir tarafında bir talep oluşturun → yöneti
 - [x] AI Concierge, karanlık mod
 - [x] Gerçek Supabase backend (Postgres + RLS + Realtime) — oda, personel, rezervasyon, kahvaltı, QR, bildirim
 - [x] Gerçek kimlik doğrulama (Supabase Auth) — rol bazlı panel erişimi
+- [x] Roller/izinler, fiyat & aktivite logları, onay talepleri, otel ayarları ve menü kataloğunu da Supabase'e taşımak — sistem artık uçtan uca gerçek backend'e bağlı
 - [ ] Çoklu dil desteği (TR/EN)
 - [ ] Misafir memnuniyet/puanlama akışı
-- [ ] Roller/izinler, fiyat & aktivite logları, otel ayarları ve menü kataloğunu da Supabase'e taşımak (şu an DB şeması hazır, istemci tarafında hâlâ oturum içi tutuluyor)
 
 ---
 
