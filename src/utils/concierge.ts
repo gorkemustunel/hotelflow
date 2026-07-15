@@ -5,7 +5,7 @@
 // reply, optionally with a deep link into the relevant guest screen.
 // ---------------------------------------------------------------------------
 
-import { hotelInfo } from '@/data/hotelInfo';
+import type { HotelInfo } from '@/types';
 import { serviceCategories } from '@/data/serviceCategories';
 
 export interface ConciergeAction {
@@ -21,7 +21,7 @@ export interface ConciergeReply {
 interface Intent {
   id: string;
   keywords: string[];
-  reply: (roomNumber: string) => ConciergeReply;
+  reply: (roomNumber: string, hotelInfo: HotelInfo) => ConciergeReply;
 }
 
 const norm = (s: string) =>
@@ -40,7 +40,7 @@ const INTENTS: Intent[] = [
   {
     id: 'wifi',
     keywords: ['wifi', 'wi-fi', 'internet', 'sifre', 'kablosuz'],
-    reply: () => ({
+    reply: (_room, hotelInfo) => ({
       text: `Wi-Fi ağ adı **${hotelInfo.wifiName}**, şifre **${hotelInfo.wifiPassword}**. Bağlanamazsanız Teknik Destek'e talep açabilirim.`,
       action: { label: 'Bilgiler sayfasını aç', href: '/guest/room/:room/info' },
     }),
@@ -48,7 +48,7 @@ const INTENTS: Intent[] = [
   {
     id: 'breakfast',
     keywords: ['kahvalti', 'breakfast'],
-    reply: () => ({
+    reply: (_room, hotelInfo) => ({
       text: `Kahvaltı saatleri **${hotelInfo.breakfastHours}** arasında, restoran katında hizmet veriyor. Odanıza servis de isteyebilirsiniz.`,
       action: { label: 'Restoran menüsünü aç', href: 'cat-restaurant' },
     }),
@@ -56,12 +56,12 @@ const INTENTS: Intent[] = [
   {
     id: 'pool',
     keywords: ['havuz', 'pool'],
-    reply: () => ({ text: `Havuz **${hotelInfo.poolHours}** saatleri arasında açık. Havlu kullanımı zorunludur.` }),
+    reply: (_room, hotelInfo) => ({ text: `Havuz **${hotelInfo.poolHours}** saatleri arasında açık. Havlu kullanımı zorunludur.` }),
   },
   {
     id: 'spa',
     keywords: ['spa', 'masaj', 'sauna', 'wellness'],
-    reply: () => ({
+    reply: (_room, hotelInfo) => ({
       text: `Spa & Wellness **${hotelInfo.spaHours}** saatleri arasında hizmet veriyor. Randevu oluşturmamı ister misiniz?`,
       action: { label: 'Spa randevusu oluştur', href: 'cat-spa' },
     }),
@@ -69,12 +69,12 @@ const INTENTS: Intent[] = [
   {
     id: 'checkin',
     keywords: ['checkin', 'check-in', 'giris saati', 'ne zaman giris'],
-    reply: () => ({ text: `Check-in saati **${hotelInfo.checkInTime}**. Erken giriş için resepsiyonla iletişime geçebilirim.` }),
+    reply: (_room, hotelInfo) => ({ text: `Check-in saati **${hotelInfo.checkInTime}**. Erken giriş için resepsiyonla iletişime geçebilirim.` }),
   },
   {
     id: 'checkout',
     keywords: ['checkout', 'check-out', 'cikis saati', 'gec cikis'],
-    reply: () => ({
+    reply: (_room, hotelInfo) => ({
       text: `Standart check-out saati **${hotelInfo.checkOutTime}**. Geç çıkış talebi oluşturmamı ister misiniz?`,
       action: { label: 'Geç çıkış talebi oluştur', href: 'cat-late-checkout' },
     }),
@@ -82,7 +82,7 @@ const INTENTS: Intent[] = [
   {
     id: 'parking',
     keywords: ['otopark', 'park', 'vale', 'arac'],
-    reply: () => ({ text: hotelInfo.parkingInfo }),
+    reply: (_room, hotelInfo) => ({ text: hotelInfo.parkingInfo }),
   },
   {
     id: 'taxi',
@@ -142,7 +142,7 @@ const INTENTS: Intent[] = [
   {
     id: 'emergency',
     keywords: ['acil', 'yardim', 'itfaiye', 'ambulans', 'polis', 'doktor', 'hasta'],
-    reply: () => ({
+    reply: (_room, hotelInfo) => ({
       text: `Acil bir durum mu var? Resepsiyon 7/24 **${hotelInfo.emergencyNumbers[0].number}** numarasından ulaşılabilir. Acil durum ekranını açıyorum.`,
       action: { label: 'Acil durum ekranını aç', href: '/guest/room/:room/emergency' },
     }),
@@ -150,12 +150,12 @@ const INTENTS: Intent[] = [
   {
     id: 'rules',
     keywords: ['kural', 'sigara', 'evcil hayvan', 'sessiz saat'],
-    reply: () => ({ text: hotelInfo.hotelRules.join(' ') }),
+    reply: (_room, hotelInfo) => ({ text: hotelInfo.hotelRules.join(' ') }),
   },
   {
     id: 'address',
     keywords: ['adres', 'nerede', 'konum'],
-    reply: () => ({ text: `${hotelInfo.hotelName}, ${hotelInfo.address} adresinde yer alıyor.` }),
+    reply: (_room, hotelInfo) => ({ text: `${hotelInfo.hotelName}, ${hotelInfo.address} adresinde yer alıyor.` }),
   },
   {
     id: 'complaint',
@@ -173,7 +173,7 @@ const INTENTS: Intent[] = [
   {
     id: 'greeting',
     keywords: ['merhaba', 'selam', 'iyi gunler', 'iyi aksamlar'],
-    reply: () => ({ text: `Merhaba! ${hotelInfo.hotelName}'a hoş geldiniz. Size nasıl yardımcı olabilirim?` }),
+    reply: (_room, hotelInfo) => ({ text: `Merhaba! ${hotelInfo.hotelName}'a hoş geldiniz. Size nasıl yardımcı olabilirim?` }),
   },
 ];
 
@@ -190,7 +190,7 @@ function resolveHref(href: string, roomNumber: string): string {
   return category ? categoryHref(roomNumber, category.slug) : `/guest/room/${roomNumber}`;
 }
 
-export function getConciergeReply(message: string, roomNumber: string): ConciergeReply {
+export function getConciergeReply(message: string, roomNumber: string, hotelInfo: HotelInfo): ConciergeReply {
   const text = norm(message);
   let best: { intent: Intent; score: number } | null = null;
 
@@ -199,7 +199,7 @@ export function getConciergeReply(message: string, roomNumber: string): Concierg
     if (score > 0 && (!best || score > best.score)) best = { intent, score };
   }
 
-  const raw = best ? best.intent.reply(roomNumber) : FALLBACK;
+  const raw = best ? best.intent.reply(roomNumber, hotelInfo) : FALLBACK;
   return raw.action ? { ...raw, action: { ...raw.action, href: resolveHref(raw.action.href, roomNumber) } } : raw;
 }
 

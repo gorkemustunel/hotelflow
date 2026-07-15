@@ -1,10 +1,12 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
+  ActivityLogEntry,
   ApprovalRequest,
   BreakfastCategory,
   BreakfastItem,
   CleaningStatus,
   Department,
+  HotelInfo,
   OccupancyStatus,
   PermissionId,
   PrepStatus,
@@ -19,21 +21,13 @@ import type {
   TechnicalStatus,
 } from '@/types';
 import { CLEANING_STATUS_LABELS, OCCUPANCY_LABELS, ROLE_LABELS, TECHNICAL_STATUS_LABELS } from '@/types';
-import { rooms as seedRooms } from '@/data/rooms';
-import { staff as seedStaff, getDemoSwitchUsers } from '@/data/staff';
-import { INITIAL_ROLES } from '@/data/roles';
-import { initialBreakfastItems } from '@/data/breakfastItems';
-import { reservations as seedReservations } from '@/data/reservations';
+import type { ServiceItemWithGroup } from '@/data/serviceItems';
+import { getDemoSwitchUsers } from '@/data/staff';
 import { generateId } from '@/utils/id';
 import { hasPermission, hasAnyPermission } from '@/utils/permissions';
+import * as ops from '@/services/opsRepository';
 
-export interface ActivityLogEntry {
-  id: string;
-  actorName: string;
-  actorRole: RoleId;
-  description: string;
-  timestamp: string;
-}
+export type { ActivityLogEntry } from '@/types';
 
 export interface NewStaffInput {
   name: string;
@@ -62,6 +56,29 @@ export interface NewReservationInput {
 
 const AVATAR_COLORS = ['#0f1f38', '#17805a', '#c39a4e', '#a67f3a', '#26456f', '#335686', '#d4af6a', '#a8823f', '#932f2b'];
 
+// Placeholder shown only for the brief window before the initial Supabase
+// fetch resolves — `AppGate` in App.tsx keeps this from ever being rendered
+// by a real consumer (HotelInfoContent/SettingsPage/etc.).
+const EMPTY_HOTEL_INFO: HotelInfo = {
+  hotelName: '',
+  tagline: '',
+  wifiName: '',
+  wifiPassword: '',
+  breakfastHours: '',
+  poolHours: '',
+  spaHours: '',
+  restaurantHours: '',
+  checkInTime: '',
+  checkOutTime: '',
+  parkingInfo: '',
+  emergencyNumbers: [],
+  hotelRules: [],
+  floorPlanNote: '',
+  address: '',
+  heritageTitle: '',
+  heritageParagraphs: [],
+};
+
 function initialsFromName(name: string) {
   return name
     .split(' ')
@@ -72,6 +89,11 @@ function initialsFromName(name: string) {
 }
 
 interface OperationsContextValue {
+  // true until rooms/staff/roles/reservations/breakfast/QR tokens have all
+  // loaded from Supabase at least once — gates rendering in App.tsx so
+  // nothing downstream reads an empty `currentUser`/`rooms`/etc. mid-fetch.
+  loading: boolean;
+
   // current demo user / role switching
   currentUser: Staff;
   demoUsers: Staff[];
@@ -112,6 +134,15 @@ interface OperationsContextValue {
   priceChangeLogs: PriceChangeLog[];
   applyPriceChange: (itemId: string, itemName: string, oldPrice: number, newPrice: number) => void;
 
+  // service / menu catalog (restaurant, minibar, spa…)
+  serviceItems: ServiceItemWithGroup[];
+  saveServiceItem: (item: ServiceItemWithGroup, oldPrice: number) => void;
+  toggleServiceItemAvailability: (id: string) => void;
+
+  // hotel settings (misafir uygulamasında görünen genel bilgiler)
+  hotelInfo: HotelInfo;
+  updateHotelInfo: (patch: Partial<HotelInfo>) => void;
+
   // breakfast management
   breakfastItems: BreakfastItem[];
   addBreakfastItem: (input: NewBreakfastItemInput) => void;
@@ -136,34 +167,102 @@ interface OperationsContextValue {
 const OperationsContext = createContext<OperationsContextValue | undefined>(undefined);
 
 export function OperationsProvider({ children }: { children: ReactNode }) {
+  // `demoUsers` is only used as a last-resort default for `currentUserId`
+  // before the first staff row loads, and to render Personel yönetimi's
+  // "known persona" grouping — it's fine that this stays a static read of
+  // `data/staff.ts`'s id list rather than the live Supabase rows.
   const demoUsers = useMemo(() => getDemoSwitchUsers(), []);
-  const [staffMembers, setStaffMembers] = useState<Staff[]>(seedStaff);
-  const [currentUserId, setCurrentUserId] = useState<string>(demoUsers[0]?.id ?? seedStaff[0].id);
-  const currentUser = staffMembers.find((s) => s.id === currentUserId) ?? staffMembers[0];
 
-  const [roles, setRoles] = useState<Record<RoleId, Role>>(INITIAL_ROLES);
+  const [staffMembers, setStaffMembers] = useState<Staff[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const currentUser = staffMembers.find((s) => s.id === currentUserId) ?? staffMembers[0] ?? ({} as Staff);
+
+  const [roles, setRoles] = useState<Record<RoleId, Role>>({} as Record<RoleId, Role>);
   const permissions = roles[currentUser.roleId]?.permissions ?? [];
   const has = useCallback((p: PermissionId) => hasPermission(permissions, p), [permissions]);
   const hasAny = useCallback((ps: PermissionId[]) => hasAnyPermission(permissions, ps), [permissions]);
 
-  const [rooms, setRooms] = useState<Room[]>(seedRooms);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [roomStatusLogs, setRoomStatusLogs] = useState<RoomStatusLog[]>([]);
-  const [qrTokens, setQrTokens] = useState<Record<string, string>>(() =>
-    Object.fromEntries(seedRooms.map((r) => [r.number, generateId('qr')])),
-  );
-  const [reservations, setReservations] = useState<Reservation[]>(seedReservations);
+  const [qrTokens, setQrTokens] = useState<Record<string, string>>({});
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [priceChangeLogs, setPriceChangeLogs] = useState<PriceChangeLog[]>([]);
-  const [breakfastItems, setBreakfastItems] = useState<BreakfastItem[]>(initialBreakfastItems);
+  const [serviceItems, setServiceItems] = useState<ServiceItemWithGroup[]>([]);
+  const [hotelInfo, setHotelInfo] = useState<HotelInfo>(EMPTY_HOTEL_INFO);
+  const [breakfastItems, setBreakfastItems] = useState<BreakfastItem[]>([]);
   const [breakfastNote, setBreakfastNote] = useState('');
   const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([]);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // ---- initial load + realtime subscriptions ---------------------------
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      ops.listRooms(),
+      ops.listStaff(),
+      ops.listRoles(),
+      ops.listReservations(),
+      ops.listBreakfastItems(),
+      ops.listQrTokens(),
+      ops.listServiceItems(),
+      ops.getHotelInfo(),
+    ])
+      .then(([roomRows, staffRows, roleRows, reservationRows, breakfastRows, qrRows, serviceItemRows, hotelInfoRow]) => {
+        if (cancelled) return;
+        setRooms(roomRows);
+        setStaffMembers(staffRows);
+        setRoles(roleRows);
+        setReservations(reservationRows);
+        setBreakfastItems(breakfastRows);
+        setQrTokens(qrRows);
+        setServiceItems(serviceItemRows);
+        setHotelInfo(hotelInfoRow);
+        setCurrentUserId((prev) => prev ?? staffRows.find((s) => demoUsers.some((d) => d.id === s.id))?.id ?? staffRows[0]?.id ?? null);
+        setLoading(false);
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('Operasyon verisi yüklenemedi:', err);
+        if (!cancelled) setLoading(false);
+      });
+
+    ops.listRoomStatusLogs().then((logs) => {
+      if (!cancelled) setRoomStatusLogs(logs);
+    });
+    ops.listPriceChangeLogs().then((logs) => {
+      if (!cancelled) setPriceChangeLogs(logs);
+    });
+    ops.listApprovalRequests().then((reqs) => {
+      if (!cancelled) setApprovalRequests(reqs);
+    });
+    ops.listActivityLog().then((logs) => {
+      if (!cancelled) setActivityLog(logs);
+    });
+
+    const unsubRooms = ops.subscribeRooms(() => ops.listRooms().then(setRooms));
+    const unsubReservations = ops.subscribeReservations(() => ops.listReservations().then(setReservations));
+    const unsubBreakfast = ops.subscribeBreakfastItems(() => ops.listBreakfastItems().then(setBreakfastItems));
+    const unsubQr = ops.subscribeQrTokens(() => ops.listQrTokens().then(setQrTokens));
+    const unsubServiceItems = ops.subscribeServiceItems(() => ops.listServiceItems().then(setServiceItems));
+
+    return () => {
+      cancelled = true;
+      unsubRooms();
+      unsubReservations();
+      unsubBreakfast();
+      unsubQr();
+      unsubServiceItems();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const logActivity = useCallback(
     (description: string) => {
-      setActivityLog((prev) => [
-        { id: generateId('log'), actorName: currentUser.name, actorRole: currentUser.roleId, description, timestamp: new Date().toISOString() },
-        ...prev,
-      ].slice(0, 200));
+      const entry: ActivityLogEntry = { id: generateId('log'), actorName: currentUser.name, actorRole: currentUser.roleId, description, timestamp: new Date().toISOString() };
+      setActivityLog((prev) => [entry, ...prev].slice(0, 200));
+      ops.insertActivityLog(entry).catch(() => {});
     },
     [currentUser],
   );
@@ -173,8 +272,10 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
   const toggleRolePermission = useCallback((roleId: RoleId, permission: PermissionId) => {
     setRoles((prev) => {
       const role = prev[roleId];
+      if (!role) return prev;
       const already = role.permissions.includes(permission);
       const nextPermissions = already ? role.permissions.filter((p) => p !== permission) : [...role.permissions, permission];
+      ops.updateRolePermissions(roleId, nextPermissions).catch(() => {});
       return { ...prev, [roleId]: { ...role, permissions: nextPermissions } };
     });
   }, []);
@@ -189,17 +290,12 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
       const room = rooms.find((r) => r.id === roomId);
       if (!room) return;
       const fromLabel = room.occupancy ? OCCUPANCY_LABELS[room.occupancy] : '—';
-      setRooms((prev) =>
-        prev.map((r) =>
-          r.id === roomId
-            ? { ...r, occupancy: value, status: value === 'occupied' ? 'occupied' : r.status === 'maintenance' ? r.status : 'vacant' }
-            : r,
-        ),
-      );
-      setRoomStatusLogs((logs) => [
-        { id: generateId('rlog'), roomNumber: room.number, actorName: currentUser.name, actorRole: currentUser.roleId, field: 'occupancy', fromLabel, toLabel: OCCUPANCY_LABELS[value], timestamp: new Date().toISOString() },
-        ...logs,
-      ]);
+      const nextStatus = value === 'occupied' ? 'occupied' : room.status === 'maintenance' ? room.status : 'vacant';
+      setRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, occupancy: value, status: nextStatus } : r)));
+      ops.updateRoom(roomId, { occupancy: value, status: nextStatus }).catch(() => {});
+      const log: RoomStatusLog = { id: generateId('rlog'), roomNumber: room.number, actorName: currentUser.name, actorRole: currentUser.roleId, field: 'occupancy', fromLabel, toLabel: OCCUPANCY_LABELS[value], timestamp: new Date().toISOString() };
+      setRoomStatusLogs((logs) => [log, ...logs]);
+      ops.insertRoomStatusLog(log).catch(() => {});
       logActivity(`Oda ${room.number} "${OCCUPANCY_LABELS[value]}" olarak işaretlendi`);
     },
     [rooms, currentUser, logActivity],
@@ -210,15 +306,12 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
       const room = rooms.find((r) => r.id === roomId);
       if (!room) return;
       const fromLabel = room.cleaningStatus ? CLEANING_STATUS_LABELS[room.cleaningStatus] : '—';
-      setRooms((prev) =>
-        prev.map((r) =>
-          r.id === roomId ? { ...r, cleaningStatus: value, lastCleanedAt: value === 'clean' ? new Date().toISOString() : r.lastCleanedAt } : r,
-        ),
-      );
-      setRoomStatusLogs((logs) => [
-        { id: generateId('rlog'), roomNumber: room.number, actorName: currentUser.name, actorRole: currentUser.roleId, field: 'cleaning', fromLabel, toLabel: CLEANING_STATUS_LABELS[value], timestamp: new Date().toISOString() },
-        ...logs,
-      ]);
+      const lastCleanedAt = value === 'clean' ? new Date().toISOString() : room.lastCleanedAt;
+      setRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, cleaningStatus: value, lastCleanedAt } : r)));
+      ops.updateRoom(roomId, { cleaningStatus: value, lastCleanedAt }).catch(() => {});
+      const log: RoomStatusLog = { id: generateId('rlog'), roomNumber: room.number, actorName: currentUser.name, actorRole: currentUser.roleId, field: 'cleaning', fromLabel, toLabel: CLEANING_STATUS_LABELS[value], timestamp: new Date().toISOString() };
+      setRoomStatusLogs((logs) => [log, ...logs]);
+      ops.insertRoomStatusLog(log).catch(() => {});
       logActivity(`Oda ${room.number} temizlik durumu "${CLEANING_STATUS_LABELS[value]}" yapıldı`);
     },
     [rooms, currentUser, logActivity],
@@ -229,17 +322,12 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
       const room = rooms.find((r) => r.id === roomId);
       if (!room) return;
       const fromLabel = room.technicalStatus ? TECHNICAL_STATUS_LABELS[room.technicalStatus] : '—';
-      setRooms((prev) =>
-        prev.map((r) =>
-          r.id === roomId
-            ? { ...r, technicalStatus: value, status: value === 'maintenance' ? 'maintenance' : r.status === 'maintenance' ? 'vacant' : r.status }
-            : r,
-        ),
-      );
-      setRoomStatusLogs((logs) => [
-        { id: generateId('rlog'), roomNumber: room.number, actorName: currentUser.name, actorRole: currentUser.roleId, field: 'technical', fromLabel, toLabel: TECHNICAL_STATUS_LABELS[value], timestamp: new Date().toISOString() },
-        ...logs,
-      ]);
+      const nextStatus = value === 'maintenance' ? 'maintenance' : room.status === 'maintenance' ? 'vacant' : room.status;
+      setRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, technicalStatus: value, status: nextStatus } : r)));
+      ops.updateRoom(roomId, { technicalStatus: value, status: nextStatus }).catch(() => {});
+      const log: RoomStatusLog = { id: generateId('rlog'), roomNumber: room.number, actorName: currentUser.name, actorRole: currentUser.roleId, field: 'technical', fromLabel, toLabel: TECHNICAL_STATUS_LABELS[value], timestamp: new Date().toISOString() };
+      setRoomStatusLogs((logs) => [log, ...logs]);
+      ops.insertRoomStatusLog(log).catch(() => {});
       logActivity(`Oda ${room.number} teknik durumu "${TECHNICAL_STATUS_LABELS[value]}" yapıldı`);
     },
     [rooms, currentUser, logActivity],
@@ -248,7 +336,9 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
   // ---- QR codes ----------------------------------------------------------
   const regenerateRoomQr = useCallback(
     (roomNumber: string) => {
-      setQrTokens((prev) => ({ ...prev, [roomNumber]: generateId('qr') }));
+      const token = generateId('qr');
+      setQrTokens((prev) => ({ ...prev, [roomNumber]: token }));
+      ops.upsertQrToken(roomNumber, token).catch(() => {});
       logActivity(`Oda ${roomNumber} için QR kodu yenilendi, eski QR kodu artık geçersiz`);
     },
     [logActivity],
@@ -269,6 +359,7 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       setReservations((prev) => [reservation, ...prev]);
+      ops.insertReservation(reservation).catch(() => {});
       logActivity(`Oda ${input.roomNumber} için ${input.guestName} adına rezervasyon oluşturuldu (${input.checkIn} → ${input.checkOut})`);
     },
     [currentUser, logActivity],
@@ -278,6 +369,7 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       const reservation = reservations.find((r) => r.id === id);
       setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, cancelled: true } : r)));
+      ops.cancelReservationRow(id).catch(() => {});
       if (reservation) logActivity(`Oda ${reservation.roomNumber} · ${reservation.guestName} rezervasyonu iptal edildi`);
     },
     [reservations, logActivity],
@@ -304,6 +396,26 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
         onDuty: true,
       };
       setStaffMembers((prev) => [newStaff, ...prev]);
+      ops
+        .insertStaff({
+          id: newStaff.id,
+          role_id: newStaff.roleId,
+          active: newStaff.active,
+          last_action_at: newStaff.lastActionAt ?? null,
+          name: newStaff.name,
+          department: newStaff.department,
+          role: newStaff.role,
+          initials: newStaff.initials,
+          color: newStaff.color,
+          phone: newStaff.phone,
+          rating: newStaff.rating,
+          completed_today: newStaff.completedToday,
+          active_tasks: newStaff.activeTasks,
+          avg_resolution_minutes: newStaff.avgResolutionMinutes,
+          on_duty: newStaff.onDuty,
+          is_demo_switch_user: false,
+        })
+        .catch(() => {});
       logActivity(`${newStaff.name} personel olarak eklendi (${ROLE_LABELS[newStaff.roleId]})`);
     },
     [staffMembers.length, logActivity],
@@ -311,9 +423,9 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
 
   const updateStaffRole = useCallback(
     (staffId: string, roleId: RoleId) => {
-      setStaffMembers((prev) =>
-        prev.map((s) => (s.id === staffId ? { ...s, roleId, lastActionAt: new Date().toISOString() } : s)),
-      );
+      const lastActionAt = new Date().toISOString();
+      setStaffMembers((prev) => prev.map((s) => (s.id === staffId ? { ...s, roleId, lastActionAt } : s)));
+      ops.updateStaff(staffId, { roleId, lastActionAt }).catch(() => {});
       const target = staffMembers.find((s) => s.id === staffId);
       if (target) logActivity(`${target.name} için rol "${ROLE_LABELS[roleId]}" olarak değiştirildi`);
     },
@@ -322,11 +434,13 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
 
   const toggleStaffActive = useCallback(
     (staffId: string) => {
-      setStaffMembers((prev) =>
-        prev.map((s) => (s.id === staffId ? { ...s, active: !s.active, lastActionAt: new Date().toISOString() } : s)),
-      );
       const target = staffMembers.find((s) => s.id === staffId);
-      if (target) logActivity(`${target.name} ${target.active ? 'pasif' : 'aktif'} yapıldı`);
+      if (!target) return;
+      const active = !target.active;
+      const lastActionAt = new Date().toISOString();
+      setStaffMembers((prev) => prev.map((s) => (s.id === staffId ? { ...s, active, lastActionAt } : s)));
+      ops.updateStaff(staffId, { active, lastActionAt }).catch(() => {});
+      logActivity(`${target.name} ${active ? 'aktif' : 'pasif'} yapıldı`);
     },
     [staffMembers, logActivity],
   );
@@ -334,13 +448,52 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
   // ---- menu price changes --------------------------------------------
   const applyPriceChange = useCallback(
     (itemId: string, itemName: string, oldPrice: number, newPrice: number) => {
-      setPriceChangeLogs((prev) => [
-        { id: generateId('plog'), itemId, itemName, actorName: currentUser.name, actorRole: currentUser.roleId, oldPrice, newPrice, timestamp: new Date().toISOString() },
-        ...prev,
-      ]);
+      const log: PriceChangeLog = { id: generateId('plog'), itemId, itemName, actorName: currentUser.name, actorRole: currentUser.roleId, oldPrice, newPrice, timestamp: new Date().toISOString() };
+      setPriceChangeLogs((prev) => [log, ...prev]);
+      ops.insertPriceChangeLog(log).catch(() => {});
       logActivity(`"${itemName}" fiyatı ${oldPrice}₺'den ${newPrice}₺'ye değiştirildi`);
     },
     [currentUser, logActivity],
+  );
+
+  // ---- service / menu catalog -------------------------------------------
+  const saveServiceItem = useCallback(
+    (item: ServiceItemWithGroup, oldPrice: number) => {
+      const stamped: ServiceItemWithGroup = { ...item, updatedBy: currentUser.name, updatedAt: new Date().toISOString() };
+      const exists = serviceItems.some((i) => i.id === item.id);
+      setServiceItems((prev) => (exists ? prev.map((i) => (i.id === item.id ? stamped : i)) : [stamped, ...prev]));
+      if (exists) ops.updateServiceItem(stamped.id, stamped).catch(() => {});
+      else ops.insertServiceItem(stamped).catch(() => {});
+      if (has('edit_prices') && oldPrice !== item.price) {
+        applyPriceChange(item.id, item.name, oldPrice, item.price);
+      }
+      logActivity(`"${item.name}" ürün/hizmet ${exists ? 'güncellendi' : 'eklendi'}`);
+    },
+    [serviceItems, currentUser, has, applyPriceChange, logActivity],
+  );
+
+  const toggleServiceItemAvailability = useCallback(
+    (id: string) => {
+      const item = serviceItems.find((i) => i.id === id);
+      if (!item) return;
+      const available = !item.available;
+      const stock: StockStatus = available ? 'in_stock' : 'out_of_stock';
+      const updatedAt = new Date().toISOString();
+      setServiceItems((prev) => prev.map((i) => (i.id === id ? { ...i, available, stock, updatedBy: currentUser.name, updatedAt } : i)));
+      ops.updateServiceItem(id, { available, stock, updatedBy: currentUser.name, updatedAt }).catch(() => {});
+      logActivity(`"${item.name}" ${available ? 'aktif' : 'pasif'} yapıldı`);
+    },
+    [serviceItems, currentUser, logActivity],
+  );
+
+  // ---- hotel settings -----------------------------------------------------
+  const updateHotelInfo = useCallback(
+    (patch: Partial<HotelInfo>) => {
+      setHotelInfo((prev) => ({ ...prev, ...patch }));
+      ops.updateHotelInfo(patch).catch(() => {});
+      logActivity('Otel ayarları güncellendi');
+    },
+    [logActivity],
   );
 
   // ---- breakfast -------------------------------------------------------
@@ -360,6 +513,7 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
         updatedAt: new Date().toISOString(),
       };
       setBreakfastItems((prev) => [item, ...prev]);
+      ops.insertBreakfastItem(item).catch(() => {});
       logActivity(`Kahvaltıya "${item.name}" eklendi`);
     },
     [currentUser, logActivity],
@@ -367,30 +521,33 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
 
   const toggleBreakfastAvailability = useCallback(
     (id: string) => {
-      setBreakfastItems((prev) =>
-        prev.map((i) => (i.id === id ? { ...i, available: !i.available, updatedAt: new Date().toISOString() } : i)),
-      );
       const item = breakfastItems.find((i) => i.id === id);
-      if (item) logActivity(`"${item.name}" ${item.available ? 'pasif' : 'aktif'} yapıldı`);
+      if (!item) return;
+      const available = !item.available;
+      const updatedAt = new Date().toISOString();
+      setBreakfastItems((prev) => prev.map((i) => (i.id === id ? { ...i, available, updatedAt } : i)));
+      ops.updateBreakfastItem(id, { available, updatedAt }).catch(() => {});
+      logActivity(`"${item.name}" ${available ? 'aktif' : 'pasif'} yapıldı`);
     },
     [breakfastItems, logActivity],
   );
 
   const setBreakfastStock = useCallback(
     (id: string, stock: StockStatus) => {
-      setBreakfastItems((prev) => prev.map((i) => (i.id === id ? { ...i, stock, updatedAt: new Date().toISOString() } : i)));
+      const updatedAt = new Date().toISOString();
+      setBreakfastItems((prev) => prev.map((i) => (i.id === id ? { ...i, stock, updatedAt } : i)));
+      ops.updateBreakfastItem(id, { stock, updatedAt }).catch(() => {});
       const item = breakfastItems.find((i) => i.id === id);
       if (item) logActivity(`"${item.name}" ${stock === 'in_stock' ? 'stokta var' : 'stokta yok'} işaretlendi`);
     },
     [breakfastItems, logActivity],
   );
 
-  const setBreakfastPrepStatus = useCallback(
-    (id: string, status: PrepStatus) => {
-      setBreakfastItems((prev) => prev.map((i) => (i.id === id ? { ...i, prepStatus: status, updatedAt: new Date().toISOString() } : i)));
-    },
-    [],
-  );
+  const setBreakfastPrepStatus = useCallback((id: string, status: PrepStatus) => {
+    const updatedAt = new Date().toISOString();
+    setBreakfastItems((prev) => prev.map((i) => (i.id === id ? { ...i, prepStatus: status, updatedAt } : i)));
+    ops.updateBreakfastItem(id, { prepStatus: status, updatedAt }).catch(() => {});
+  }, []);
 
   const changeBreakfastPrice = useCallback(
     (id: string, newPrice: number): 'applied' | 'pending_approval' => {
@@ -398,25 +555,26 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
       if (!item) return 'applied';
       const oldPrice = item.price ?? 0;
       if (has('edit_prices')) {
-        setBreakfastItems((prev) => prev.map((i) => (i.id === id ? { ...i, price: newPrice, updatedAt: new Date().toISOString() } : i)));
+        const updatedAt = new Date().toISOString();
+        setBreakfastItems((prev) => prev.map((i) => (i.id === id ? { ...i, price: newPrice, updatedAt } : i)));
+        ops.updateBreakfastItem(id, { price: newPrice, updatedAt }).catch(() => {});
         applyPriceChange(id, item.name, oldPrice, newPrice);
         return 'applied';
       }
-      setApprovalRequests((prev) => [
-        {
-          id: generateId('appr'),
-          type: 'price_change',
-          requestedByName: currentUser.name,
-          requestedByRole: currentUser.roleId,
-          itemId: id,
-          itemName: item.name,
-          oldValue: String(oldPrice),
-          newValue: String(newPrice),
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
+      const req: ApprovalRequest = {
+        id: generateId('appr'),
+        type: 'price_change',
+        requestedByName: currentUser.name,
+        requestedByRole: currentUser.roleId,
+        itemId: id,
+        itemName: item.name,
+        oldValue: String(oldPrice),
+        newValue: String(newPrice),
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+      setApprovalRequests((prev) => [req, ...prev]);
+      ops.insertApprovalRequest(req).catch(() => {});
       logActivity(`"${item.name}" için fiyat değişikliği talebi oluşturdu (${oldPrice}₺ → ${newPrice}₺)`);
       return 'pending_approval';
     },
@@ -428,14 +586,17 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       const req = approvalRequests.find((a) => a.id === id);
       if (!req) return;
-      setApprovalRequests((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'approved', resolvedAt: new Date().toISOString(), resolvedByName: currentUser.name } : a)));
+      const resolvedAt = new Date().toISOString();
+      setApprovalRequests((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'approved', resolvedAt, resolvedByName: currentUser.name } : a)));
+      ops.updateApprovalRequest(id, { status: 'approved', resolvedAt, resolvedByName: currentUser.name }).catch(() => {});
       if (req.type === 'price_change') {
         const newPrice = Number(req.newValue);
-        setBreakfastItems((prev) => prev.map((i) => (i.id === req.itemId ? { ...i, price: newPrice, updatedAt: new Date().toISOString() } : i)));
-        setPriceChangeLogs((prev) => [
-          { id: generateId('plog'), itemId: req.itemId, itemName: req.itemName, actorName: currentUser.name, actorRole: currentUser.roleId, oldPrice: Number(req.oldValue), newPrice, timestamp: new Date().toISOString() },
-          ...prev,
-        ]);
+        const updatedAt = new Date().toISOString();
+        setBreakfastItems((prev) => prev.map((i) => (i.id === req.itemId ? { ...i, price: newPrice, updatedAt } : i)));
+        ops.updateBreakfastItem(req.itemId, { price: newPrice, updatedAt }).catch(() => {});
+        const log: PriceChangeLog = { id: generateId('plog'), itemId: req.itemId, itemName: req.itemName, actorName: currentUser.name, actorRole: currentUser.roleId, oldPrice: Number(req.oldValue), newPrice, timestamp: new Date().toISOString() };
+        setPriceChangeLogs((prev) => [log, ...prev]);
+        ops.insertPriceChangeLog(log).catch(() => {});
       }
       logActivity(`${currentUser.name}, "${req.itemName}" için fiyat değişikliğini onayladı`);
     },
@@ -445,7 +606,9 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
   const rejectRequest = useCallback(
     (id: string) => {
       const req = approvalRequests.find((a) => a.id === id);
-      setApprovalRequests((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'rejected', resolvedAt: new Date().toISOString(), resolvedByName: currentUser.name } : a)));
+      const resolvedAt = new Date().toISOString();
+      setApprovalRequests((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'rejected', resolvedAt, resolvedByName: currentUser.name } : a)));
+      ops.updateApprovalRequest(id, { status: 'rejected', resolvedAt, resolvedByName: currentUser.name }).catch(() => {});
       if (req) logActivity(`${currentUser.name}, "${req.itemName}" için talebi reddetti`);
     },
     [approvalRequests, currentUser, logActivity],
@@ -453,6 +616,7 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<OperationsContextValue>(
     () => ({
+      loading,
       currentUser,
       demoUsers,
       switchUser,
@@ -477,6 +641,11 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
       toggleStaffActive,
       priceChangeLogs,
       applyPriceChange,
+      serviceItems,
+      saveServiceItem,
+      toggleServiceItemAvailability,
+      hotelInfo,
+      updateHotelInfo,
       breakfastItems,
       addBreakfastItem,
       toggleBreakfastAvailability,
@@ -491,6 +660,7 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
       activityLog,
     }),
     [
+      loading,
       currentUser,
       demoUsers,
       switchUser,
@@ -515,6 +685,11 @@ export function OperationsProvider({ children }: { children: ReactNode }) {
       toggleStaffActive,
       priceChangeLogs,
       applyPriceChange,
+      serviceItems,
+      saveServiceItem,
+      toggleServiceItemAvailability,
+      hotelInfo,
+      updateHotelInfo,
       breakfastItems,
       addBreakfastItem,
       toggleBreakfastAvailability,

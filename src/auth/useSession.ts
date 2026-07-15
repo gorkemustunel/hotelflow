@@ -1,40 +1,62 @@
+import { useEffect, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '@/services/supabaseClient';
 import type { AppRole, AuthSession } from './types';
 
-const ADMIN_KEY = 'hf-auth-admin-staff-id';
-const STAFF_KEY = 'hf-auth-staff-staff-id';
+/** Ends the current Supabase Auth session. There is only ever one signed-in
+ * user per browser now (real auth replaced the old dual sessionStorage-flag
+ * system), so both the admin and staff exit buttons call the same signOut —
+ * two names are kept so neither `AdminLayout` nor `StaffLayout` needed to
+ * change their import. */
+export async function clearAdminAuthed() {
+  await supabase?.auth.signOut();
+}
+export async function clearStaffAuthed() {
+  await supabase?.auth.signOut();
+}
 
-export function setAdminAuthed(staffId: string) {
-  window.sessionStorage.setItem(ADMIN_KEY, staffId);
-}
-export function clearAdminAuthed() {
-  window.sessionStorage.removeItem(ADMIN_KEY);
-}
-export function setStaffAuthed(staffId: string) {
-  window.sessionStorage.setItem(STAFF_KEY, staffId);
-}
-export function clearStaffAuthed() {
-  window.sessionStorage.removeItem(STAFF_KEY);
+function mapUserToSession(user: User | null | undefined): AuthSession | null {
+  if (!user) return null;
+  const role = user.user_metadata?.role as AppRole | undefined;
+  const staffId = user.user_metadata?.staffId as string | undefined;
+  if (!role || !staffId) return null;
+  return {
+    userId: user.id,
+    name: (user.user_metadata?.name as string | undefined) ?? user.email ?? 'Kullanıcı',
+    roles: [role],
+    staffId,
+  };
 }
 
 /**
- * Demo session hook, backed by `sessionStorage` (per browser tab, cleared
- * on logout or when the tab closes). There is no real backend behind this:
- * `AdminSelectPage` / `StaffSelectPage` validate a mock username/password
- * pair (see `./credentials`) and, on success, mark the relevant surface as
- * authenticated here. `RequireAuth` only reads this hook's shape (`session`
- * + `isLoading`), so swapping in a real auth provider later only means
- * rewriting this file.
+ * Real Supabase Auth session, mapped into the shape the rest of the app
+ * expects. `user_metadata.role` / `.staffId` / `.name` are set once, at
+ * account-creation time, by `scripts/seed-auth-users.mjs` — see that file
+ * for the full list of seeded demo accounts.
  */
 export function useSession(): { session: AuthSession | null; isLoading: boolean } {
-  const roles: AppRole[] = [];
-  if (window.sessionStorage.getItem(ADMIN_KEY)) roles.push('admin');
-  if (window.sessionStorage.getItem(STAFF_KEY)) roles.push('staff');
+  const [state, setState] = useState<{ session: AuthSession | null; isLoading: boolean }>({ session: null, isLoading: true });
 
-  if (roles.length === 0) {
-    return { session: null, isLoading: false };
-  }
-  return {
-    session: { userId: 'demo-user', name: 'Demo Kullanıcı', roles },
-    isLoading: false,
-  };
+  useEffect(() => {
+    if (!supabase) {
+      setState({ session: null, isLoading: false });
+      return;
+    }
+
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled) setState({ session: mapUserToSession(data.session?.user), isLoading: false });
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setState({ session: mapUserToSession(session?.user), isLoading: false });
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  return state;
 }

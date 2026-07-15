@@ -1,7 +1,7 @@
 import { Icon } from '@/components/common/Icon';
 import { DecoDivider } from '@/components/common/DecoDivider';
 import { DecoCorner } from '@/components/common/DecoCorner';
-import { hotelInfo } from '@/data/hotelInfo';
+import { useOperations } from '@/context/OperationsContext';
 
 /**
  * Editorial "about the hotel" moment — a two-column story block pairing
@@ -10,6 +10,7 @@ import { hotelInfo } from '@/data/hotelInfo';
  * the same weight a hero image would on a real property site).
  */
 export function HotelStorySection() {
+  const { hotelInfo } = useOperations();
   return (
     <div className="overflow-hidden rounded-sm border border-line bg-cream-50">
       <div className="grid gap-0 sm:grid-cols-2">

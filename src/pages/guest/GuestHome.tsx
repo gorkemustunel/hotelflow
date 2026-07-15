@@ -5,17 +5,18 @@ import { RequestCard } from '@/components/guest/RequestCard';
 import { DecoCorner } from '@/components/common/DecoCorner';
 import { RoomSpecsStrip } from '@/components/guest/RoomSpecsStrip';
 import { useAppData } from '@/context/AppDataContext';
+import { useOperations } from '@/context/OperationsContext';
 import { useViewMode } from '@/context/ViewModeContext';
 import { serviceCategories, quickActionSlugs } from '@/data/serviceCategories';
-import { getRoomByNumber } from '@/data/rooms';
 import clsx from 'clsx';
 
 export function GuestHome() {
   const { roomNumber = '' } = useParams();
   const navigate = useNavigate();
   const { getActiveRequestsForRoom } = useAppData();
+  const { rooms } = useOperations();
   const { isDesktop } = useViewMode();
-  const room = getRoomByNumber(roomNumber);
+  const room = rooms.find((r) => r.number === roomNumber);
   const activeRequests = getActiveRequestsForRoom(roomNumber);
   const quickActions = quickActionSlugs.map((slug) => serviceCategories.find((c) => c.slug === slug)!).filter(Boolean);
   const mainCategories = serviceCategories.filter((c) => c.type !== 'emergency');

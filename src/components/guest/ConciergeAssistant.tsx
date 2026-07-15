@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@/components/common/Icon';
 import { getConciergeReply, SUGGESTED_QUESTIONS, type ConciergeAction } from '@/utils/concierge';
-import { hotelInfo } from '@/data/hotelInfo';
+import { useOperations } from '@/context/OperationsContext';
 
 interface ChatMessage {
   id: string;
@@ -15,16 +15,17 @@ interface ChatMessage {
 let messageSeq = 0;
 const nextId = () => `msg-${++messageSeq}`;
 
-const WELCOME: ChatMessage = {
-  id: 'welcome',
-  role: 'assistant',
-  text: `Merhaba! Ben ${hotelInfo.hotelName} concierge asistanınızım. Wi-Fi, kahvaltı saatleri, geç çıkış, taksi çağırma gibi konularda hemen yardımcı olabilirim.`,
-};
-
 export function ConciergeAssistant({ roomNumber }: { roomNumber: string }) {
   const navigate = useNavigate();
+  const { hotelInfo } = useOperations();
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    {
+      id: 'welcome',
+      role: 'assistant',
+      text: `Merhaba! Ben ${hotelInfo.hotelName} concierge asistanınızım. Wi-Fi, kahvaltı saatleri, geç çıkış, taksi çağırma gibi konularda hemen yardımcı olabilirim.`,
+    },
+  ]);
   const [draft, setDraft] = useState('');
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,7 +53,7 @@ export function ConciergeAssistant({ roomNumber }: { roomNumber: string }) {
     setTyping(true);
     window.setTimeout(
       () => {
-        const reply = getConciergeReply(text, roomNumber);
+        const reply = getConciergeReply(text, roomNumber, hotelInfo);
         setMessages((prev) => [...prev, { id: nextId(), role: 'assistant', text: reply.text, action: reply.action }]);
         setTyping(false);
       },

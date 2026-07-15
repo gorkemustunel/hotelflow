@@ -4,7 +4,7 @@
 
 Misafirler odalarındaki QR kodu tarayarak resepsiyonu aramadan temizlik, oda servisi, teknik destek, spa ve daha fazlasını talep eder. Yönetici ve personel panelleri bu talepleri gerçek zamanlı takip eder, rezervasyon takvimini yönetir ve operasyonel raporları görüntüler.
 
-`React 19` · `TypeScript` · `Tailwind CSS v4` · `Vite` · `React Router v7` — tamamen istemci tarafında çalışan, backend'siz bir demo/prototip (bkz. [Mimari](#mimari)).
+`React 19` · `TypeScript` · `Tailwind CSS v4` · `Vite` · `React Router v7` · `Supabase` (Postgres + Auth + Realtime) — gerçek bir backend'e bağlı, çoklu cihaz arasında canlı senkronize olan bir demo/prototip (bkz. [Mimari](#mimari)).
 
 ---
 
@@ -14,6 +14,7 @@ Misafirler odalarındaki QR kodu tarayarak resepsiyonu aramadan temizlik, oda se
 - [Mimari](#mimari)
 - [Klasör yapısı](#klasör-yapısı)
 - [Kurulum](#kurulum)
+- [Backend kurulumu](#backend-kurulumu)
 - [Demo akışı](#demo-akışı)
 - [Tasarım sistemi](#tasarım-sistemi)
 - [Yol haritası](#yol-haritası)
@@ -36,7 +37,8 @@ Misafirler odalarındaki QR kodu tarayarak resepsiyonu aramadan temizlik, oda se
 - **Raporlar** — gelir/doluluk trend grafiği, departman performansı, CSV dışa aktarım, yazdırılabilir görünüm
 - **SLA/gecikme takibi** — tahmini süresini aşan talepler otomatik işaretlenir
 - Personel, menü/fiyat, kahvaltı ve rol/yetki yönetimi; fiyat değişikliklerinde onay akışı
-- İzin bazlı erişim kontrolü (8 rol × 18 yetki), demo kullanıcı değiştirici
+- İzin bazlı erişim kontrolü (8 rol × 18 yetki)
+- Şifreyle giriş (Supabase Auth) — yönetici paneline sadece `super_admin`/`hotel_manager` rolleri, diğer tüm roller personel paneline erişebilir
 - **Canlı Demo Modu** — açıldığında otomatik simüle misafir talepleri üretir
 
 ### Personel paneli
@@ -45,10 +47,11 @@ Misafirler odalarındaki QR kodu tarayarak resepsiyonu aramadan temizlik, oda se
 
 ## Mimari
 
-Gerçek bir backend olmadan "gerçekmiş gibi hissettiren" bir demo hedeflendi; bu yüzden mimari kararların çoğu ileride gerçek bir API'ye geçişi tek noktadan kolaylaştıracak şekilde alındı:
+Uygulama artık gerçek bir Supabase projesine bağlı çalışıyor (Postgres + Row Level Security + Auth + Realtime) — localStorage/mock-data modu tamamen kaldırıldı, `.env` yapılandırılmadan uygulama açılmaz (bkz. [Backend kurulumu](#backend-kurulumu)).
 
-- **Repository katmanı** (`src/services`) — Talep verisi `RequestsRepository` arayüzü arkasında soyutlanır. Bugün `LocalRequestsRepository` (localStorage) kullanılıyor; `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` tanımlanırsa aynı arayüzü uygulayan `ApiRequestsRepository` (Supabase + Realtime) otomatik devreye girer. Hiçbir component hangisinin aktif olduğunu bilmez.
-- **State yönetimi** — React Context + `useState` (6 provider: `AppData`, `Operations`, `Notifications`, `Toast`, `ViewMode`, `Theme`). Küçük/orta ölçekli bir demo için Redux benzeri bir kütüphane yerine bilinçli olarak tercih edildi.
+- **Repository katmanı** (`src/services`) — Her veri alanı (talepler, odalar, personel, roller, rezervasyonlar, kahvaltı, QR token'ları, bildirimler) kendi repository modülü arkasında soyutlanır; component'ler doğrudan Supabase client'ı bilmez. Talepler `RequestsRepository` arayüzü + `ApiRequestsRepository` (Supabase + Realtime); geri kalan alanlar `opsRepository.ts` / `notificationsRepository.ts` altında toplanır. Realtime abonelikleri sayesinde bir cihazda yapılan değişiklik (oda durumu, rezervasyon, kahvaltı stoku, QR yenileme) diğer açık sekmelerde/cihazlarda anında görünür.
+- **Gerçek kimlik doğrulama** — Yönetici ve personel girişleri Supabase Auth (`signInWithPassword`) üzerinden gerçek hesaplarla yapılır (bkz. `scripts/seed-auth-users.mjs`). `user_metadata.role`/`staffId` alanları hangi panele erişebileceğini ve hangi personel kaydına bağlı olduğunu belirler. Misafir tarafı kimlik doğrulama gerektirmez — QR token'ı yeterlidir.
+- **State yönetimi** — React Context + `useState` (6 provider: `AppData`, `Operations`, `Notifications`, `Toast`, `ViewMode`, `Theme`). Küçük/orta ölçekli bir demo için Redux benzeri bir kütüphane yerine bilinçli olarak tercih edildi; ilk yüklemede tüm operasyonel veri Supabase'den çekilene kadar `AppGate` bir yükleme ekranı gösterir.
 - **Türetilmiş durum, saklanan durum değil** — Rezervasyon durumu (`upcoming`/`active`/`completed`/`cancelled`) hiçbir yerde state olarak tutulmaz; her render'da tarihlerden hesaplanır (`utils/reservations.ts`), böylece asla senkron dışı kalamaz. Tarih aritmetiği bilinçli olarak UTC'ye sabitlendi (İstanbul'un UTC+3 farkının gün kaymasına yol açmaması için).
 - **İzin sistemi** — Rol → yetki eşlemesi çalışma zamanında düzenlenebilir (`OperationsContext.toggleRolePermission`); UI, `PermissionGate` ile yetkisiz ekranlarda kırık görünüm yerine anlaşılır bir "erişim yok" durumu gösterir.
 - **Karanlık mod** — Ayrı bir `dark:` sınıf seti yazılmadı. Tailwind v4'ün `@theme` bloğu renk token'larını gerçek CSS custom property'lerine derliyor; `[data-theme="dark"]` altında bu değişkenleri (kağıt/mürekkep rollerini takas ederek) yeniden tanımlamak tüm uygulamayı — misafir, yönetici, personel panelleri dahil — tek yerden yeniden temalıyor.
@@ -59,26 +62,33 @@ Gerçek bir backend olmadan "gerçekmiş gibi hissettiren" bir demo hedeflendi; 
 
 ```
 src/
-├── auth/            # Route guard iskeleti (demo: her istek açık, gerçek login src/auth/* değişikliğiyle eklenir)
+├── auth/            # useSession (Supabase Auth), RequireAuth route guard, demo credential yardımcıları
 ├── components/
 │   ├── admin/        common/        guest/        staff/
 ├── context/          # AppData, Operations, Notifications, Toast, ViewMode, Theme
-├── data/             # Mock veri: oteller, odalar, personel, roller, rezervasyonlar, hizmetler
+├── data/             # Statik referans veri (rol etiketleri, oda tipi spec'leri, demo personel listesi)
 ├── layouts/          # GuestLayout, AdminLayout, StaffLayout
-├── pages/            # Rol bazlı sayfalar (guest/, admin/, staff/)
-├── services/         # RequestsRepository arayüzü + local/Supabase implementasyonları
+├── pages/            # Rol bazlı sayfalar (guest/, admin/, staff/) + SetupRequiredPage
+├── services/         # Supabase client + repository katmanı (requests, ops, notifications, mappers)
 ├── types/            # Paylaşılan TypeScript tipleri (tek dosya, backend şemasına yakın)
 └── utils/            # concierge, reservations, sla, csv, analytics, permissions, format, time
+supabase/
+└── schema.sql        # Tüm tablolar + RLS politikaları + seed data (tek seferde çalıştırılır)
+scripts/
+└── seed-auth-users.mjs  # Demo admin/personel Supabase Auth hesaplarını oluşturur
 ```
 
 ## Kurulum
 
 ```bash
 npm install
-npm run dev
 ```
 
-> Not: Bu proje demo/prototip amaçlıdır. Backend bağlanmadığı sürece tüm veriler `src/data` altındaki mock dosyalarından gelir; talepler tarayıcının `localStorage`'ında tutulur. Gerçek zamanlı çoklu-cihaz senkronizasyonu için `.env` dosyasına Supabase kimlik bilgileri eklenebilir (bkz. `src/services/supabaseClient.ts`).
+Uygulama gerçek bir Supabase projesine ihtiyaç duyar — `npm run dev` çalıştırmadan önce [Backend kurulumu](#backend-kurulumu) adımlarını tamamla. `.env` yoksa uygulama çalışır ama boş bir "yapılandırma eksik" ekranı gösterir (kod hatası değildir).
+
+```bash
+npm run dev
+```
 
 Diğer komutlar:
 
@@ -89,13 +99,29 @@ npm run lint       # oxlint ile statik analiz
 npm test           # Vitest ile birim testleri çalıştır
 ```
 
+## Backend kurulumu
+
+1. [supabase.com](https://supabase.com/dashboard) üzerinde ücretsiz bir proje oluştur.
+2. Supabase Dashboard → **SQL Editor**'a git, `supabase/schema.sql` dosyasının tamamını yapıştırıp çalıştır. Bu tek adım tüm tabloları, RLS politikalarını, realtime yayınlarını ve mevcut demo verisiyle birebir aynı seed data'yı oluşturur.
+3. `.env.example` dosyasını `.env` olarak kopyala; Project Settings → API'den **Project URL** ve **anon public key**'i `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` alanlarına yapıştır.
+4. Project Settings → API'den **service_role** key'ini kopyala (bu anahtarı `.env`'e KOYMA — sadece bir sonraki komutta geçici olarak kullanılır) ve demo giriş hesaplarını oluştur:
+   ```bash
+   SUPABASE_SERVICE_ROLE_KEY=xxx node scripts/seed-auth-users.mjs
+   ```
+   Bu, 8 demo personayı (2 yönetici + 6 personel) `<kullanıcı-adı>@hotelflow.demo` / `1234` bilgileriyle Supabase Auth'a ekler — aynı bilgiler giriş ekranlarındaki "Demo giriş bilgileri" panelinde de gösterilir.
+5. `npm run dev` (veya canlıya deploy ediyorsan Netlify/Vercel ortam değişkenlerine aynı `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` çiftini ekle).
+
+Script'i tekrar çalıştırmak güvenlidir — var olan hesaplar atlanır.
+
 ## Demo akışı
 
 Uygulama `/` adresinde üç rol arasında geçiş sunar:
 
-- **Misafir Demo** — Örnek bir oda seçip `/guest/room/:roomNumber` deneyimini açar (gerçekte QR kod bu linke yönlendirir; token doğrulaması dahildir).
-- **Yönetici Paneli** — `/admin`: dashboard, talep/rezervasyon/rapor yönetimi, oda & QR yönetimi, personel, hizmet/menü yönetimi, ayarlar.
-- **Personel Paneli** — `/staff`: personel seçimi ve o personele/departmanına özel görev listesi.
+- **Misafir Demo** — Örnek bir oda seçip `/guest/room/:roomNumber` deneyimini açar (gerçekte QR kod bu linke yönlendirir; token doğrulaması dahildir). Giriş gerektirmez.
+- **Yönetici Paneli** — `/admin-select`'te şifreyle giriş yapılır (sadece `super_admin`/`hotel_manager` hesapları), ardından `/admin`: dashboard, talep/rezervasyon/rapor yönetimi, oda & QR yönetimi, personel, hizmet/menü yönetimi, ayarlar.
+- **Personel Paneli** — `/staff`'ta şifreyle giriş yapılır (diğer tüm roller, resepsiyon dahil), ardından o personele/departmanına özel görev listesi.
+
+Demo giriş bilgileri her iki giriş ekranındaki "Demo giriş bilgileri" panelinde gösterilir (hesapları oluşturmak için bkz. [Backend kurulumu](#backend-kurulumu)).
 
 Uçtan uca test etmek için: misafir tarafında bir talep oluşturun → yönetici panelinde bildirimi görün, personele atayın → personel panelinde göreve başlayıp tamamlayın → misafir tarafında durumun güncellendiğini gözlemleyin. "Canlı Demo Modu"nu açarak bu döngüyü otomatik simüle taleplerle de izleyebilirsiniz.
 
@@ -108,9 +134,11 @@ Uçtan uca test etmek için: misafir tarafında bir talep oluşturun → yöneti
 - [x] QR tabanlı misafir erişimi + token yenileme
 - [x] Rezervasyon takvimi, SLA takibi, raporlama
 - [x] AI Concierge, karanlık mod
+- [x] Gerçek Supabase backend (Postgres + RLS + Realtime) — oda, personel, rezervasyon, kahvaltı, QR, bildirim
+- [x] Gerçek kimlik doğrulama (Supabase Auth) — rol bazlı panel erişimi
 - [ ] Çoklu dil desteği (TR/EN)
 - [ ] Misafir memnuniyet/puanlama akışı
-- [ ] Gerçek zamanlı çoklu-cihaz senkronizasyonu için tam Supabase entegrasyonu
+- [ ] Roller/izinler, fiyat & aktivite logları, otel ayarları ve menü kataloğunu da Supabase'e taşımak (şu an DB şeması hazır, istemci tarafında hâlâ oturum içi tutuluyor)
 
 ---
 

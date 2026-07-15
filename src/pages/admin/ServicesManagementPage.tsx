@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { Button } from '@/components/common/Button';
 import { ServiceItemModal } from '@/components/admin/ServiceItemModal';
-import { allServiceItems, type ServiceItemWithGroup } from '@/data/serviceItems';
+import type { ServiceItemWithGroup } from '@/data/serviceItems';
 import { serviceCategories } from '@/data/serviceCategories';
 import { formatCurrency } from '@/utils/format';
 import { formatDateTime } from '@/utils/time';
@@ -13,12 +13,11 @@ import clsx from 'clsx';
 const CATEGORY_FILTERS = serviceCategories.filter((c) => c.type === 'order' || c.slug === 'spa-masaj');
 
 export function ServicesManagementPage() {
-  const [items, setItems] = useState<ServiceItemWithGroup[]>(allServiceItems);
+  const { has, serviceItems: items, saveServiceItem, toggleServiceItemAvailability } = useOperations();
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [modalItem, setModalItem] = useState<ServiceItemWithGroup | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const { showToast } = useToast();
-  const { has, currentUser, applyPriceChange } = useOperations();
   const canEditPrice = has('edit_prices');
   const canToggle = has('toggle_item_availability');
 
@@ -34,14 +33,7 @@ export function ServicesManagementPage() {
   }, [filtered]);
 
   const handleSave = (item: ServiceItemWithGroup, oldPrice: number) => {
-    const stamped: ServiceItemWithGroup = { ...item, updatedBy: currentUser.name, updatedAt: new Date().toISOString() };
-    setItems((prev) => {
-      const exists = prev.some((i) => i.id === item.id);
-      return exists ? prev.map((i) => (i.id === item.id ? stamped : i)) : [stamped, ...prev];
-    });
-    if (canEditPrice && oldPrice !== item.price) {
-      applyPriceChange(item.id, item.name, oldPrice, item.price);
-    }
+    saveServiceItem(item, oldPrice);
     showToast(`"${item.name}" kaydedildi.`, 'success');
   };
 
@@ -50,7 +42,7 @@ export function ServicesManagementPage() {
       showToast('Bu işlem için yetkiniz yok.', 'error');
       return;
     }
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, available: !i.available, stock: !i.available ? 'in_stock' : 'out_of_stock', updatedBy: currentUser.name, updatedAt: new Date().toISOString() } : i)));
+    toggleServiceItemAvailability(id);
   };
 
   return (

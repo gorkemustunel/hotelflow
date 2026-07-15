@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '@/components/common/Icon';
 import { Button } from '@/components/common/Button';
 import { useOperations } from '@/context/OperationsContext';
-import { ADMIN_ROLE_IDS, credentialsFor, DEMO_PASSWORD, verifyCredential } from '@/auth/credentials';
-import { setStaffAuthed } from '@/auth/useSession';
+import { ADMIN_ROLE_IDS, credentialsFor, DEMO_PASSWORD, emailFor, usernameFor } from '@/auth/credentials';
+import { supabase } from '@/services/supabaseClient';
 import { getDemoSwitchUsers } from '@/data/staff';
 
 const STAFF_STAFF_IDS = getDemoSwitchUsers()
@@ -17,20 +17,27 @@ export function StaffSelectPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [showHint, setShowHint] = useState(false);
 
   const credentials = credentialsFor(STAFF_STAFF_IDS);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const staffId = verifyCredential(STAFF_STAFF_IDS, username, password);
-    if (!staffId) {
+    if (!supabase) return;
+    setSubmitting(true);
+    setError('');
+    const email = emailFor(usernameFor(username.trim()));
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    setSubmitting(false);
+    const role = data.user?.user_metadata?.role;
+    const staffId = data.user?.user_metadata?.staffId as string | undefined;
+    if (authError || !data.user || role !== 'staff' || !staffId) {
+      if (data.user && (role !== 'staff' || !staffId)) await supabase.auth.signOut();
       setError('Kullanıcı adı veya şifre hatalı.');
       return;
     }
-    setError('');
     switchUser(staffId);
-    setStaffAuthed(staffId);
     navigate(`/staff/${staffId}`);
   };
 
@@ -82,8 +89,8 @@ export function StaffSelectPage() {
                 {error}
               </p>
             )}
-            <Button type="submit" fullWidth variant="success" icon={<Icon name="LogIn" className="h-4 w-4" />}>
-              Giriş Yap
+            <Button type="submit" fullWidth variant="success" disabled={submitting} icon={<Icon name="LogIn" className="h-4 w-4" />}>
+              {submitting ? 'Giriş yapılıyor…' : 'Giriş Yap'}
             </Button>
           </form>
 

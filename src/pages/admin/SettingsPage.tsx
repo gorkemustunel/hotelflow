@@ -1,22 +1,30 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { FieldLabel, TextArea, TextInput, Toggle } from '@/components/common/FormField';
 import { Segmented } from '@/components/common/Segmented';
-import { hotelInfo as seedInfo } from '@/data/hotelInfo';
+import { useOperations } from '@/context/OperationsContext';
 import { useToast } from '@/context/ToastContext';
 
 export function SettingsPage() {
-  const [info, setInfo] = useState(seedInfo);
+  const { hotelInfo, updateHotelInfo } = useOperations();
+  const [info, setInfo] = useState(hotelInfo);
   const [language, setLanguage] = useState<'tr' | 'en'>('tr');
   const [notifSound, setNotifSound] = useState(true);
   const [notifUrgentOnly, setNotifUrgentOnly] = useState(false);
   const { showToast } = useToast();
 
+  // Keep the draft in sync if hotelInfo changes elsewhere (e.g. another
+  // admin editing it concurrently, reflected via Supabase Realtime).
+  useEffect(() => setInfo(hotelInfo), [hotelInfo]);
+
   const set = <K extends keyof typeof info>(key: K, value: (typeof info)[K]) => setInfo((prev) => ({ ...prev, [key]: value }));
 
-  const handleSave = () => showToast('Otel ayarları kaydedildi.', 'success');
+  const handleSave = () => {
+    updateHotelInfo(info);
+    showToast('Otel ayarları kaydedildi.', 'success');
+  };
 
   return (
     <div className="space-y-5">

@@ -1,7 +1,8 @@
 import { Icon } from '@/components/common/Icon';
-import { hotelInfo } from '@/data/hotelInfo';
+import { useOperations } from '@/context/OperationsContext';
 
 export function EmergencyContent() {
+  const { hotelInfo } = useOperations();
   return (
     <div className="space-y-5">
       <div className="rounded-2xl bg-ruby-500/10 p-4 text-center ring-1 ring-ruby-500/20">

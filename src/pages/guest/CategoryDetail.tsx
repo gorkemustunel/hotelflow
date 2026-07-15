@@ -4,9 +4,9 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { RequestForm } from '@/components/guest/RequestForm';
 import { MenuOrder } from '@/components/guest/MenuOrder';
 import { getCategoryBySlug } from '@/data/serviceCategories';
-import { getItemsByCategory } from '@/data/serviceItems';
 import { HotelInfoContent } from '@/components/guest/HotelInfoContent';
 import { EmergencyContent } from '@/components/guest/EmergencyContent';
+import { useOperations } from '@/context/OperationsContext';
 import { useViewMode } from '@/context/ViewModeContext';
 import clsx from 'clsx';
 
@@ -14,6 +14,7 @@ export function CategoryDetail() {
   const { roomNumber, slug = '' } = useParams();
   const navigate = useNavigate();
   const { isDesktop } = useViewMode();
+  const { serviceItems } = useOperations();
   const category = getCategoryBySlug(slug);
 
   if (!category) {
@@ -31,7 +32,7 @@ export function CategoryDetail() {
     );
   }
 
-  const items = getItemsByCategory(category.id);
+  const items = serviceItems.filter((i) => i.categoryId === category.id);
 
   return (
     <div className="space-y-5">

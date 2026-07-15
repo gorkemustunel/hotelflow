@@ -4,8 +4,6 @@ import { Icon } from '@/components/common/Icon';
 import { Modal } from '@/components/common/Modal';
 import { DecoDivider } from '@/components/common/DecoDivider';
 import { DecoCorner } from '@/components/common/DecoCorner';
-import { rooms } from '@/data/rooms';
-import { hotelInfo } from '@/data/hotelInfo';
 import { useOperations } from '@/context/OperationsContext';
 
 const ROLE_CARDS = [
@@ -37,7 +35,7 @@ const ROLE_CARDS = [
 
 export function RoleSelectPage() {
   const navigate = useNavigate();
-  const { qrTokens } = useOperations();
+  const { qrTokens, rooms, hotelInfo } = useOperations();
   const [roomPickerOpen, setRoomPickerOpen] = useState(false);
 
   const handleSelect = (key: string) => {

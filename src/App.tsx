@@ -1,14 +1,16 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppDataProvider } from '@/context/AppDataContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NotificationsProvider } from '@/context/NotificationsContext';
-import { OperationsProvider } from '@/context/OperationsContext';
+import { OperationsProvider, useOperations } from '@/context/OperationsContext';
 import { ViewModeProvider } from '@/context/ViewModeContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { FullPageLoader } from '@/components/common/Spinner';
 import { RequireAuth } from '@/auth/RequireAuth';
 import { PermissionGate } from '@/components/admin/PermissionGate';
+import { isSupabaseConfigured } from '@/services/supabaseClient';
+import { SetupRequiredPage } from '@/pages/SetupRequiredPage';
 
 import { RoleSelectPage } from '@/pages/RoleSelectPage';
 
@@ -43,12 +45,33 @@ const StaffDashboard = lazy(() => import('@/pages/staff/StaffDashboard').then((m
 
 const AdminSelectPage = lazy(() => import('@/pages/AdminSelectPage').then((m) => ({ default: m.AdminSelectPage })));
 
+/** Blocks rendering the actual app until the initial Supabase fetch
+ * (rooms/staff/roles/reservations/breakfast/QR tokens — see
+ * `OperationsProvider`) has resolved at least once. Without this gate,
+ * components that assume `currentUser`/`rooms`/etc. are already populated
+ * (almost everything in the admin/staff panels) would render against empty
+ * arrays for a frame or two on every load. */
+function AppGate({ children }: { children: ReactNode }) {
+  const { loading } = useOperations();
+  if (loading) return <FullPageLoader label="Otel verileri yükleniyor…" />;
+  return <>{children}</>;
+}
+
 export default function App() {
+  // The whole app now requires a real Supabase project (see
+  // `supabase/schema.sql`) — there is no localStorage/mock-data fallback
+  // anymore. Fail loudly and helpfully instead of letting every context
+  // throw its own "Supabase is not configured" error.
+  if (!isSupabaseConfigured) {
+    return <SetupRequiredPage />;
+  }
+
   return (
     <ThemeProvider>
     <NotificationsProvider>
       <AppDataProvider>
       <OperationsProvider>
+      <AppGate>
       <ViewModeProvider>
       <ToastProvider>
         <BrowserRouter>
@@ -117,6 +140,7 @@ export default function App() {
         </BrowserRouter>
       </ToastProvider>
       </ViewModeProvider>
+      </AppGate>
       </OperationsProvider>
       </AppDataProvider>
     </NotificationsProvider>

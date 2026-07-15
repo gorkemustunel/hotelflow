@@ -1,20 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AppNotification, NotificationAudience } from '@/types';
 import { generateId } from '@/utils/id';
+import {
+  insertNotification,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  subscribeNotifications,
+} from '@/services/notificationsRepository';
 
-const STORAGE_KEY = 'hotelflow_notifications_v1';
 const MAX_NOTIFICATIONS = 100;
-
-function loadNotifications(): AppNotification[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as AppNotification[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
 
 export interface NotifyInput {
   audience: NotificationAudience;
@@ -38,11 +33,25 @@ interface NotificationsContextValue {
 const NotificationsContext = createContext<NotificationsContextValue | undefined>(undefined);
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => loadNotifications());
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
-  }, [notifications]);
+    let cancelled = false;
+    listNotifications()
+      .then((rows) => {
+        if (!cancelled) setNotifications(rows);
+      })
+      .catch(() => {});
+    const unsubscribe = subscribeNotifications(() => {
+      listNotifications().then((rows) => {
+        if (!cancelled) setNotifications(rows);
+      });
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
   const notify = useCallback((input: NotifyInput) => {
     const entry: AppNotification = {
@@ -57,16 +66,19 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       requestId: input.requestId,
     };
     setNotifications((prev) => [entry, ...prev].slice(0, MAX_NOTIFICATIONS));
+    insertNotification(entry).catch(() => {});
   }, []);
 
   const markRead = useCallback((id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    markNotificationRead(id).catch(() => {});
   }, []);
 
   const markAllRead = useCallback((audience: NotificationAudience, roomNumber?: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.audience === audience && (audience === 'admin' || n.roomNumber === roomNumber) ? { ...n, read: true } : n)),
     );
+    markAllNotificationsRead(audience, roomNumber).catch(() => {});
   }, []);
 
   const getForGuest = useCallback((roomNumber: string) => notifications.filter((n) => n.audience === 'guest' && n.roomNumber === roomNumber), [notifications]);

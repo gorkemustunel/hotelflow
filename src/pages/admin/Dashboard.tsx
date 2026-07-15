@@ -47,10 +47,10 @@ function isToday(iso: string) {
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { requests, staff } = useAppData();
-  const { rooms, breakfastItems, approvalRequests, priceChangeLogs, activityLog, approveRequest, rejectRequest, has } = useOperations();
+  const { requests } = useAppData();
+  const { rooms, staffMembers, breakfastItems, approvalRequests, priceChangeLogs, activityLog, approveRequest, rejectRequest, has } = useOperations();
   const metrics = computeDashboardMetrics(requests);
-  const performance = computeStaffPerformance(requests, staff)
+  const performance = computeStaffPerformance(requests, staffMembers)
     .sort((a, b) => b.completedCount - a.completedCount)
     .slice(0, 5);
 

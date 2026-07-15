@@ -1,8 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { GuestRequest, RequestStatus } from '@/types';
 import { REQUEST_STATUS_LABELS } from '@/types';
-import { rooms as seedRooms } from '@/data/rooms';
-import { staff as seedStaff } from '@/data/staff';
 import { requestsRepository, isSupabaseConfigured } from '@/services';
 import type { NewRequestInput } from '@/services';
 import { loadRequestsFromStorage } from '@/services/localRequestsRepository';
@@ -12,8 +10,6 @@ export type { NewRequestInput };
 
 interface AppDataContextValue {
   requests: GuestRequest[];
-  rooms: typeof seedRooms;
-  staff: typeof seedStaff;
   createRequest: (input: NewRequestInput) => void;
   assignStaff: (id: string, staffId: string, staffName: string) => void;
   updateStatus: (id: string, status: RequestStatus, note?: string, actor?: string) => void;
@@ -157,8 +153,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AppDataContextValue>(
     () => ({
       requests,
-      rooms: seedRooms,
-      staff: seedStaff,
       createRequest,
       assignStaff,
       updateStatus,

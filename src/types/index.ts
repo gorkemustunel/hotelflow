@@ -148,6 +148,14 @@ export interface PriceChangeLog {
   timestamp: string;
 }
 
+export interface ActivityLogEntry {
+  id: string;
+  actorName: string;
+  actorRole: RoleId;
+  description: string;
+  timestamp: string;
+}
+
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface ApprovalRequest {

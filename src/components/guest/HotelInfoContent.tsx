@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Icon } from '@/components/common/Icon';
 import { Card } from '@/components/common/Card';
 import { HotelStorySection } from '@/components/guest/HotelStorySection';
-import { hotelInfo } from '@/data/hotelInfo';
+import { useOperations } from '@/context/OperationsContext';
 import { useViewMode } from '@/context/ViewModeContext';
 import clsx from 'clsx';
 
@@ -21,6 +21,7 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
 export function HotelInfoContent() {
   const [showPassword, setShowPassword] = useState(false);
   const { isDesktop } = useViewMode();
+  const { hotelInfo } = useOperations();
 
   return (
     <div className="space-y-5">
