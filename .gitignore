@@ -44,3 +44,8 @@ ios/App/App.xcodeproj/xcuserdata
 ios/App/build
 ios/App/Podfile.lock
 DerivedData
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
