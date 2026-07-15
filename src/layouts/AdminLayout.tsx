@@ -36,7 +36,7 @@ export function AdminLayout() {
     <div className="min-h-screen overflow-x-hidden bg-cream-100">
       <header className="sticky top-0 z-20 border-b border-line bg-cream-50/95 backdrop-blur print:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
-          <button onClick={() => navigate('/')} className="flex items-center gap-2.5">
+          <button onClick={() => navigate('/admin')} className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-500/15 ring-1 ring-gold-400/30">
               <Icon name="Gem" className="h-5 w-5 text-gold-600" />
             </div>

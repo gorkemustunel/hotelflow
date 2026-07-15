@@ -44,7 +44,9 @@ export function StaffSelectPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-cream-100 bg-deco-pattern px-6 py-12">
       <div className="w-full max-w-sm">
-        <button onClick={() => navigate('/')} className="mx-auto mb-8 flex items-center gap-2.5">
+        {/* Static brand mark, not a link — this login screen deliberately
+            doesn't expose a way back to the guest/admin surfaces. */}
+        <div className="mx-auto mb-8 flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-500/15 ring-1 ring-gold-400/30">
             <Icon name="Gem" className="h-5 w-5 text-gold-600" />
           </div>
@@ -52,7 +54,7 @@ export function StaffSelectPage() {
             <p className="font-display text-sm font-semibold leading-tight text-navy-900">HotelFlow</p>
             <p className="text-[10px] uppercase tracking-widest text-gold-600">Personel Girişi</p>
           </div>
-        </button>
+        </div>
 
         <div className="rounded-3xl bg-cream-50 p-7 shadow-card ring-1 ring-navy-900/5">
           <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600">

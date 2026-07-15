@@ -115,13 +115,13 @@ Script'i tekrar çalıştırmak güvenlidir — var olan hesaplar atlanır.
 
 ## Demo akışı
 
-Uygulama `/` adresinde üç rol arasında geçiş sunar:
+Üç yüzey birbirinden tamamen bağımsız URL'lerde yaşar ve hiçbiri diğerine link vermez — gerçek bir otelde misafir, yönetici ve personelin birbirinin giriş ekranını hiç görmemesi gibi:
 
-- **Misafir Demo** — Örnek bir oda seçip `/guest/room/:roomNumber` deneyimini açar (gerçekte QR kod bu linke yönlendirir; token doğrulaması dahildir). Giriş gerektirmez.
+- **Misafir** — `/` adresi doğrudan oda seçim ekranını açar (gerçekte QR kod misafiri doğrudan `/guest/room/:roomNumber`'a yönlendirir; token doğrulaması dahildir). Giriş gerektirmez.
 - **Yönetici Paneli** — `/admin-select`'te şifreyle giriş yapılır (sadece `super_admin`/`hotel_manager` hesapları), ardından `/admin`: dashboard, talep/rezervasyon/rapor yönetimi, oda & QR yönetimi, personel, hizmet/menü yönetimi, ayarlar.
 - **Personel Paneli** — `/staff`'ta şifreyle giriş yapılır (diğer tüm roller, resepsiyon dahil), ardından o personele/departmanına özel görev listesi.
 
-Demo giriş bilgileri her iki giriş ekranındaki "Demo giriş bilgileri" panelinde gösterilir (hesapları oluşturmak için bkz. [Backend kurulumu](#backend-kurulumu)).
+Demo giriş bilgileri her iki giriş ekranındaki "Demo giriş bilgileri" panelinde gösterilir (hesapları oluşturmak için bkz. [Backend kurulumu](#backend-kurulumu)). `/admin-select` ve `/staff`'a ana sayfadan bir link yok — gerçek üründe bu URL'ler sadece ilgili ekibe bilinir; demoyu sunarken adres çubuğuna doğrudan yazman gerekir.
 
 Uçtan uca test etmek için: misafir tarafında bir talep oluşturun → yönetici panelinde bildirimi görün, personele atayın → personel panelinde göreve başlayıp tamamlayın → misafir tarafında durumun güncellendiğini gözlemleyin. "Canlı Demo Modu"nu açarak bu döngüyü otomatik simüle taleplerle de izleyebilirsiniz.
 

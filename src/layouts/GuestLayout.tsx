@@ -91,7 +91,7 @@ export function GuestLayout() {
             </button>
             <button
               onClick={() => navigate('/')}
-              aria-label="Rol seçimine dön"
+              aria-label="Oda seçimine dön"
               className="flex items-center gap-1.5 rounded-full bg-navy-900/5 p-1.5 text-navy-900 ring-1 ring-line transition hover:bg-navy-900/10"
             >
               <Icon name="LogOut" className="h-3.5 w-3.5" />
